@@ -52,8 +52,8 @@
         // CONFIG
         const DEV_MODE = true; 
         const CREDENTIALS = {
-            mqtt_user: 'YOUR_USERNAME',
-            mqtt_pass: 'YOUR_PASSWORD',
+            mqtt_user: 'goallight',
+            mqtt_pass: 'cranberryGoal5',
             ota_secret: 'YOUR_DEFAULT_SECRET' // Fallback if not in URL
         };
 
@@ -127,7 +127,7 @@
                 password: CREDENTIALS.mqtt_pass,
                 onSuccess: () => {
                     const message = new Paho.MQTT.Message(JSON.stringify(data));
-                    message.destinationName = `nhl_light/control/${uuid}`;
+                    message.destinationName = `nhl_light/config/${uuid}`;
                     message.qos = 1;
                     client.send(message);
                     showStatus(`Sent: ${data.team_name} to ${uuid}`);
