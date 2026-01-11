@@ -1,140 +1,245 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Goal Light Control</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; line-height: 1.6; max-width: 500px; margin: auto; background-color: #f4f7f6; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .field { margin-bottom: 20px; }
-        label { display: block; font-weight: bold; color: #444; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        input:focus { border-color: #007bff; outline: none; box-shadow: 0 0 0 2px rgba(0,123,255,0.2); }
-        button { background: #28a745; color: white; padding: 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 18px; font-weight: bold; transition: transform 0.1s, background 0.3s; }
-        button:active { transform: scale(0.98); }
-        button:hover { background: #218838; }
-        #status { margin-top: 20px; padding: 15px; border-radius: 6px; display: none; text-align: center; font-weight: bold; }
-        .badge { background: #ffc107; padding: 3px 10px; border-radius: 20px; font-size: 11px; float: right; }
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 20px;
+        line-height: 1.6;
+        max-width: 500px;
+        margin: auto;
+        background-color: #f4f7f6;
+      }
+      .card {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      }
+      .field {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        font-weight: bold;
+        color: #444;
+        margin-bottom: 5px;
+      }
+      input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-sizing: border-box;
+        font-size: 16px;
+      }
+      input:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+      }
+      button {
+        background: #28a745;
+        color: white;
+        padding: 15px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        width: 100%;
+        font-size: 18px;
+        font-weight: bold;
+        transition: transform 0.1s, background 0.3s;
+      }
+      button:active {
+        transform: scale(0.98);
+      }
+      button:hover {
+        background: #218838;
+      }
+      #status {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 6px;
+        display: none;
+        text-align: center;
+        font-weight: bold;
+      }
+      .badge {
+        background: #ffc107;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        float: right;
+      }
     </style>
-</head>
-<body>
-
+  </head>
+  <body>
     <div class="card">
-        <span id="mode-badge" class="badge">DEV MODE</span>
-        <h2>🚨 Goal Light Control</h2>
-        <p style="color: #666; font-size: 0.9em;">Update the team name and trigger the light.</p>
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+      <span id="mode-badge" class="badge">DEV MODE</span>
+      <h2>🚨 Goal Light Control</h2>
+      <p style="color: #666; font-size: 0.9em">Update the team name and trigger the light.</p>
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
-        <div class="field">
-            <label>Device ID</label>
-            <input type="text" id="uuid" placeholder="e.g. pi5-001">
-        </div>
+      <div class="field">
+        <label>Device ID</label>
+        <input type="text" id="uuid" placeholder="e.g. pi5-001" />
+      </div>
 
-        <div class="field">
-            <label>Team Name</label>
-            <input type="text" id="team_name" placeholder="e.g. Canucks">
-        </div>
+      <div class="field">
+        <label>Team Name</label>
+        <input type="text" id="team_name" placeholder="e.g. Canucks" />
+      </div>
 
-        <div class="field" id="secret_field">
-            <label>Security Key</label>
-            <input type="password" id="ota_secret" placeholder="Enter secret key">
-        </div>
+      <div class="field" id="secret_field">
+        <label>Security Key</label>
+        <input type="password" id="ota_secret" placeholder="Enter secret key" />
+      </div>
 
-        <button onclick="sendTeamUpdate()">Update Team & Flash Light</button>
+      <div class="field">
+        <label>WiFi SSID</label>
+        <input type="text" id="wifi_ssid" placeholder="Home WiFi Name" />
+      </div>
 
-        <div id="status"></div>
+      <div class="field">
+        <label>WiFi Password</label>
+        <input type="password" id="wifi_pass" placeholder="Home WiFi Password" />
+      </div>
+
+      <button onclick="handleUpdate()">Update Settings & WiFi</button>
+
+      <button onclick="sendTeamUpdate()">Update Team & Flash Light</button>
+
+      <div id="status"></div>
     </div>
 
     <script>
-        // CONFIG
-        const DEV_MODE = true; 
-        const CREDENTIALS = {
-            mqtt_user: 'goallight',
-            mqtt_pass: 'cranberryGoal5',
-            ota_secret: 'armadillo-paternity-sniff-stonework-silicon-headstone-observant' 
-        };
+      // CONFIG
+      const DEV_MODE = true;
+      const CREDENTIALS = {
+        mqtt_user: 'goallight',
+        mqtt_pass: 'cranberryGoal5',
+        ota_secret: 'armadillo-paternity-sniff-stonework-silicon-headstone-observant',
+      };
 
-        const BROKER = {
-            url: '771968717fbb4ca8a42fcb8aab2180b5.s1.eu.hivemq.cloud',
-            port: 8884,
-            path: '/mqtt'
-        };
+      const BROKER = {
+        url: '771968717fbb4ca8a42fcb8aab2180b5.s1.eu.hivemq.cloud',
+        port: 8884,
+        path: '/mqtt',
+      };
 
-        // QR AUTO-FILL
-        window.onload = () => {
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('id')) document.getElementById('uuid').value = params.get('id');
-            if (params.get('secret')) document.getElementById('ota_secret').value = params.get('secret');
-            
-            if (!DEV_MODE) {
-                const b = document.getElementById('mode-badge');
-                b.innerText = "SECURE"; b.style.background = "#28a745"; b.style.color = "white";
-            }
-        };
+      // QR AUTO-FILL
+      window.onload = () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('id')) document.getElementById('uuid').value = params.get('id');
+        if (params.get('secret'))
+          document.getElementById('ota_secret').value = params.get('secret');
 
-        function showStatus(msg, isError = false) {
-            const s = document.getElementById('status');
-            s.style.display = 'block';
-            s.style.background = isError ? '#f8d7da' : '#d4edda';
-            s.style.color = isError ? '#721c24' : '#155724';
-            s.innerText = msg;
+        if (!DEV_MODE) {
+          const b = document.getElementById('mode-badge');
+          b.innerText = 'SECURE';
+          b.style.background = '#28a745';
+          b.style.color = 'white';
         }
+      };
 
-        async function sendTeamUpdate() {
-            const uuid = document.getElementById('uuid').value;
-            const team = document.getElementById('team_name').value;
-            const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
+      function showStatus(msg, isError = false) {
+        const s = document.getElementById('status');
+        s.style.display = 'block';
+        s.style.background = isError ? '#f8d7da' : '#d4edda';
+        s.style.color = isError ? '#721c24' : '#155724';
+        s.innerText = msg;
+      }
 
-            if (!uuid || !team || !secret) {
-                showStatus("Missing Device ID, Team Name, or Secret", true);
-                return;
-            }
+      async function handleUpdate() {
+        // 1. First, send the standard Team Update
+        await sendTeamUpdate();
 
-            const timestamp = Math.floor(Date.now() / 1000);
-            
-            // --- NEW SIGNING LOGIC ---
-            // This string must match the snprintf in your C code exactly: "%s:%d"
-            const messageToSign = `${team}:${timestamp}`;
-            
-            // Generate Hex HMAC-SHA256
-            const signature = CryptoJS.HmacSHA256(messageToSign, secret).toString(CryptoJS.enc.Hex);
-            
-            const finalPayload = {
-                team_name: team,
-                timestamp: timestamp,
-                signature: signature
-            };
+        // 2. Then, check if WiFi fields are filled to send encrypted credentials
+        const ssid = document.getElementById('wifi_ssid').value;
+        const pass = document.getElementById('wifi_pass').value;
 
-            if (DEV_MODE) {
-                publishMQTT(uuid, finalPayload);
-            } else {
-                console.log("Secure Relay Payload:", finalPayload);
-                showStatus("Secure Mode: Payload logged to console.");
-            }
+        if (ssid && pass) {
+          sendEncryptedWiFi(ssid, pass);
         }
+      }
 
-        function publishMQTT(uuid, data) {
-            const cid = "web_" + Math.random().toString(16).substr(2, 5);
-            const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+      function sendEncryptedWiFi(ssid, pass) {
+        const uuid = document.getElementById('uuid').value;
+        const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
 
-            client.connect({
-                useSSL: true,
-                userName: CREDENTIALS.mqtt_user,
-                password: CREDENTIALS.mqtt_pass,
-                onSuccess: () => {
-                    const message = new Paho.MQTT.Message(JSON.stringify(data));
-                    message.destinationName = `nhl_light/config/${uuid}`;
-                    message.qos = 1;
-                    client.send(message);
-                    showStatus(`✅ Update sent! Goal Light is now following ${data.team_name}`);
-                    setTimeout(() => client.disconnect(), 1000);
-                },
-                onFailure: (e) => showStatus("Connection Failed: " + e.errorMessage, true)
-            });
-        }
+        // Create the JSON payload
+        const wifiData = JSON.stringify({ ssid: ssid, pass: pass });
+
+        // Prepare the Key (First 32 bytes of the secret)
+        const key = CryptoJS.enc.Utf8.parse(secret.substring(0, 32));
+
+        // Encrypt using AES-ECB (to match the ESP32 code we discussed)
+        const encrypted = CryptoJS.AES.encrypt(wifiData, key, {
+          mode: CryptoJS.mode.ECB,
+          padding: CryptoJS.pad.Pkcs7,
+        });
+
+        // Convert to Hex string for the ESP32
+        const hexPayload = encrypted.ciphertext.toString(CryptoJS.enc.Hex);
+
+        // Publish to the specific wifi_update topic
+        publishMQTT(`config/wifi_update`, hexPayload, true); // Added 'isRaw' flag
+      }
+
+      // Updated publishMQTT to handle different topics and raw strings
+      function publishMQTT(subTopic, data, isRaw = false) {
+        const uuid = document.getElementById('uuid').value;
+        const cid = 'web_' + Math.random().toString(16).substr(2, 5);
+        const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+
+        client.connect({
+          useSSL: true,
+          userName: CREDENTIALS.mqtt_user,
+          password: CREDENTIALS.mqtt_pass,
+          onSuccess: () => {
+            const payload = isRaw ? data : JSON.stringify(data);
+            const message = new Paho.MQTT.Message(payload);
+
+            // If it's the wifi update, we use the general topic, otherwise the device-specific one
+            message.destinationName = subTopic.includes('wifi_update')
+              ? `nhl_light/${subTopic}`
+              : `nhl_light/config/${uuid}`;
+
+            message.qos = 1;
+            client.send(message);
+            console.log('Published to:', message.destinationName);
+
+            if (isRaw) showStatus('✅ Encrypted WiFi Credentials Sent!');
+            setTimeout(() => client.disconnect(), 1000);
+          },
+          onFailure: (e) => showStatus('Connection Failed: ' + e.errorMessage, true),
+        });
+      }
+
+    //   function publishMQTT(uuid, data) {
+    //     const cid = 'web_' + Math.random().toString(16).substr(2, 5);
+    //     const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+
+    //     client.connect({
+    //       useSSL: true,
+    //       userName: CREDENTIALS.mqtt_user,
+    //       password: CREDENTIALS.mqtt_pass,
+    //       onSuccess: () => {
+    //         const message = new Paho.MQTT.Message(JSON.stringify(data));
+    //         message.destinationName = `nhl_light/config/${uuid}`;
+    //         message.qos = 1;
+    //         client.send(message);
+    //         showStatus(`✅ Update sent! Goal Light is now following ${data.team_name}`);
+    //         setTimeout(() => client.disconnect(), 1000);
+    //       },
+    //       onFailure: (e) => showStatus('Connection Failed: ' + e.errorMessage, true),
+    //     });
+    //   }
     </script>
-</body>
+  </body>
 </html>
