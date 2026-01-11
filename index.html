@@ -3,95 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MQTT Web Controller</title>
+    <title>Goal Light Control</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 50px; background: #f0f2f5; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: inline-block; min-width: 300px; }
-        h2 { color: #333; margin-bottom: 5px; }
-        p { color: #777; font-size: 0.9rem; }
-        
-        .controls { margin: 20px 0; }
-        button { font-size: 1rem; font-weight: bold; padding: 12px 30px; margin: 10px; cursor: pointer; border: none; border-radius: 8px; transition: transform 0.1s, background 0.3s; }
-        button:active { transform: scale(0.95); }
-        
-        .on { background: #2ecc71; color: white; }
-        .on:hover { background: #27ae60; }
-        .off { background: #e74c3c; color: white; }
-        .off:hover { background: #c0392b; }
-        
-        #status { margin-top: 20px; font-weight: bold; font-size: 1.1rem; color: #e67e22; }
-        #log { margin-top: 30px; text-align: left; font-family: monospace; font-size: 0.8rem; background: #eee; padding: 10px; border-radius: 5px; max-height: 150px; overflow-y: auto; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; line-height: 1.6; max-width: 500px; margin: auto; background-color: #f4f7f6; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .field { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; color: #444; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        input:focus { border-color: #007bff; outline: none; box-shadow: 0 0 0 2px rgba(0,123,255,0.2); }
+        button { background: #28a745; color: white; padding: 15px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 18px; font-weight: bold; transition: transform 0.1s, background 0.3s; }
+        button:active { transform: scale(0.98); }
+        button:hover { background: #218838; }
+        #status { margin-top: 20px; padding: 15px; border-radius: 6px; display: none; text-align: center; font-weight: bold; }
+        .badge { background: #ffc107; padding: 3px 10px; border-radius: 20px; font-size: 11px; float: right; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>Smart Device Control</h2>
-        <p>Broker: <em>broker.emqx.io (WSS)</em></p>
-        
-        <div class="controls">
-            <button class="on" onclick="publish('home/office/light', 'ON')">TURN ON</button>
-            <button class="off" onclick="publish('home/office/light', 'OFF')">TURN OFF</button>
+        <span id="mode-badge" class="badge">DEV MODE</span>
+        <h2>🚨 Goal Light Control</h2>
+        <p style="color: #666; font-size: 0.9em;">Update the team name and trigger the light.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <div class="field">
+            <label>Device ID</label>
+            <input type="text" id="uuid" placeholder="e.g. pi5-001">
         </div>
 
-        <div id="status">Status: Connecting...</div>
-
-        <div id="log">
-            <strong>System Log:</strong><br>
+        <div class="field">
+            <label>Team Name</label>
+            <input type="text" id="team_name" placeholder="e.g. Canucks">
         </div>
+
+        <div class="field" id="secret_field">
+            <label>Security Key</label>
+            <input type="password" id="ota_secret" placeholder="Enter secret key">
+        </div>
+
+        <button onclick="sendTeamUpdate()">Update Team & Flash Light</button>
+
+        <div id="status"></div>
     </div>
 
     <script>
-        // Settings - Port 8084 and useSSL: true are required for HTTPS hosting
-        const broker = "771968717fbb4ca8a42fcb8aab2180b5.s1.eu.hivemq.cloud";
-        const port = 8884; 
-        const clientID = "web_client_" + Math.floor(Math.random() * 10000);
-
-        const client = new Paho.MQTT.Client(broker, port, clientID);
-
-        // Connection options
-        const options = {
-            useSSL: true, // Required for GitHub Pages / HTTPS
-            userName: "goallight", // Replace with your HiveMQ credentials
-            password: "cranberryGoal5",
-            onSuccess: onConnect,
-            onFailure: onFail
+        // CONFIG
+        const DEV_MODE = true; 
+        const CREDENTIALS = {
+            mqtt_user: 'YOUR_USERNAME',
+            mqtt_pass: 'YOUR_PASSWORD',
+            ota_secret: 'YOUR_DEFAULT_SECRET' // Fallback if not in URL
         };
 
-        // Connect the client
-        client.connect(options);
+        const BROKER = {
+            url: '771968717fbb4ca8a42fcb8aab2180b5.s1.eu.hivemq.cloud',
+            port: 8884,
+            path: '/mqtt'
+        };
 
-        function onConnect() {
-            const statusDiv = document.getElementById("status");
-            statusDiv.innerHTML = "Status: Connected ✅";
-            statusDiv.style.color = "#27ae60";
-            writeToLog("Connected to EMQX Broker.");
+        // QR AUTO-FILL
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('id')) document.getElementById('uuid').value = params.get('id');
+            if (params.get('secret')) document.getElementById('ota_secret').value = params.get('secret');
+            
+            if (!DEV_MODE) {
+                const b = document.getElementById('mode-badge');
+                b.innerText = "SECURE"; b.style.background = "#28a745"; b.style.color = "white";
+            }
+        };
+
+        function showStatus(msg, isError = false) {
+            const s = document.getElementById('status');
+            s.style.display = 'block';
+            s.style.background = isError ? '#f8d7da' : '#d4edda';
+            s.style.color = isError ? '#721c24' : '#155724';
+            s.innerText = msg;
         }
 
-        function onFail(err) {
-            const statusDiv = document.getElementById("status");
-            statusDiv.innerHTML = "Status: Connection Failed ❌";
-            statusDiv.style.color = "#c0392b";
-            writeToLog("Error: " + JSON.stringify(err));
-        }
+        async function sendTeamUpdate() {
+            const uuid = document.getElementById('uuid').value;
+            const team = document.getElementById('team_name').value;
+            const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
 
-        function publish(topic, payload) {
-            if (client.isConnected()) {
-                const message = new Paho.MQTT.Message(payload);
-                message.destinationName = topic;
-                client.send(message);
-                writeToLog(`Sent [${payload}] to topic [${topic}]`);
+            if (!uuid || !team) {
+                showStatus("Please enter Device ID and Team Name", true);
+                return;
+            }
+
+            const payloadData = {
+                team_name: team,
+                delay: 30,
+                timestamp: Math.floor(Date.now() / 1000)
+            };
+
+            const payloadString = JSON.stringify(payloadData);
+            
+            // Generate Signature
+            const signature = CryptoJS.HmacSHA256(payloadString, secret).toString();
+            
+            const finalPayload = {
+                ...payloadData,
+                signature: signature
+            };
+
+            if (DEV_MODE) {
+                publishMQTT(uuid, finalPayload);
             } else {
-                alert("Wait for connection...");
+                // Future Netlify logic
+                console.log("Secure Relay:", finalPayload);
             }
         }
 
-        function writeToLog(msg) {
-            const log = document.getElementById("log");
-            const time = new Date().toLocaleTimeString();
-            log.innerHTML += `> ${time}: ${msg}<br>`;
-            log.scrollTop = log.scrollHeight; // Auto-scroll to bottom
+        function publishMQTT(uuid, data) {
+            const cid = "web_" + Math.random().toString(16).substr(2, 5);
+            const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+
+            client.connect({
+                useSSL: true,
+                userName: CREDENTIALS.mqtt_user,
+                password: CREDENTIALS.mqtt_pass,
+                onSuccess: () => {
+                    const message = new Paho.MQTT.Message(JSON.stringify(data));
+                    message.destinationName = `nhl_light/control/${uuid}`;
+                    message.qos = 1;
+                    client.send(message);
+                    showStatus(`Sent: ${data.team_name} to ${uuid}`);
+                    setTimeout(() => client.disconnect(), 500);
+                },
+                onFailure: (e) => showStatus("Connection Failed: " + e.errorMessage, true)
+            });
         }
     </script>
 </body>
