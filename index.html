@@ -54,7 +54,7 @@
         const CREDENTIALS = {
             mqtt_user: 'goallight',
             mqtt_pass: 'cranberryGoal5',
-            ota_secret: 'YOUR_DEFAULT_SECRET' // Fallback if not in URL
+            ota_secret: 'armadillo-paternity-sniff-stonework-silicon-headstone-observant' 
         };
 
         const BROKER = {
@@ -88,32 +88,31 @@
             const team = document.getElementById('team_name').value;
             const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
 
-            if (!uuid || !team) {
-                showStatus("Please enter Device ID and Team Name", true);
+            if (!uuid || !team || !secret) {
+                showStatus("Missing Device ID, Team Name, or Secret", true);
                 return;
             }
 
-            const payloadData = {
-                team_name: team,
-                delay: 30,
-                timestamp: Math.floor(Date.now() / 1000)
-            };
-
-            const payloadString = JSON.stringify(payloadData);
+            const timestamp = Math.floor(Date.now() / 1000);
             
-            // Generate Signature
-            const signature = CryptoJS.HmacSHA256(payloadString, secret).toString();
+            // --- NEW SIGNING LOGIC ---
+            // This string must match the snprintf in your C code exactly: "%s:%d"
+            const messageToSign = `${team}:${timestamp}`;
+            
+            // Generate Hex HMAC-SHA256
+            const signature = CryptoJS.HmacSHA256(messageToSign, secret).toString(CryptoJS.enc.Hex);
             
             const finalPayload = {
-                ...payloadData,
+                team_name: team,
+                timestamp: timestamp,
                 signature: signature
             };
 
             if (DEV_MODE) {
                 publishMQTT(uuid, finalPayload);
             } else {
-                // Future Netlify logic
-                console.log("Secure Relay:", finalPayload);
+                console.log("Secure Relay Payload:", finalPayload);
+                showStatus("Secure Mode: Payload logged to console.");
             }
         }
 
@@ -130,8 +129,8 @@
                     message.destinationName = `nhl_light/config/${uuid}`;
                     message.qos = 1;
                     client.send(message);
-                    showStatus(`Sent: ${data.team_name} to ${uuid}`);
-                    setTimeout(() => client.disconnect(), 500);
+                    showStatus(`✅ Update sent! Goal Light is now following ${data.team_name}`);
+                    setTimeout(() => client.disconnect(), 1000);
                 },
                 onFailure: (e) => showStatus("Connection Failed: " + e.errorMessage, true)
             });
