@@ -54,12 +54,19 @@
         font-size: 18px;
         font-weight: bold;
         transition: transform 0.1s, background 0.3s;
+        margin-bottom: 10px;
       }
       button:active {
         transform: scale(0.98);
       }
       button:hover {
         background: #218838;
+      }
+      button.secondary {
+        background: #6c757d;
+      }
+      button.secondary:hover {
+        background: #5a6268;
       }
       #status {
         margin-top: 20px;
@@ -82,23 +89,28 @@
     <div class="card">
       <span id="mode-badge" class="badge">DEV MODE</span>
       <h2>🚨 Goal Light Control</h2>
-      <p style="color: #666; font-size: 0.9em">Update the team name and trigger the light.</p>
+      <p style="color: #666; font-size: 0.9em">Update team or configure emergency WiFi.</p>
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
       <div class="field">
         <label>Device ID</label>
-        <input type="text" id="uuid" placeholder="e.g. pi5-001" />
+        <input type="text" id="uuid" placeholder="e.g. 8209fb4d..." />
+      </div>
+
+      <div class="field" id="secret_field">
+        <label>Security Key (OTA Secret)</label>
+        <input type="password" id="ota_secret" placeholder="Enter secret key" />
       </div>
 
       <div class="field">
         <label>Team Name</label>
-        <input type="text" id="team_name" placeholder="e.g. Canucks" />
+        <input type="text" id="team_name" placeholder="e.g. VAN" />
       </div>
 
-      <div class="field" id="secret_field">
-        <label>Security Key</label>
-        <input type="password" id="ota_secret" placeholder="Enter secret key" />
-      </div>
+      <button onclick="sendTeamUpdate()">Update Team & Flash Light</button>
+
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
+      <p style="color: #d9534f; font-size: 0.8em; font-weight: bold;">EMERGENCY WIFI SETUP</p>
 
       <div class="field">
         <label>WiFi SSID</label>
@@ -110,9 +122,7 @@
         <input type="password" id="wifi_pass" placeholder="Home WiFi Password" />
       </div>
 
-      <button onclick="handleUpdate()">Update Settings & WiFi</button>
-
-      <button onclick="sendTeamUpdate()">Update Team & Flash Light</button>
+      <button class="secondary" onclick="sendEncryptedWiFi()">Update WiFi Credentials</button>
 
       <div id="status"></div>
     </div>
@@ -132,12 +142,10 @@
         path: '/mqtt',
       };
 
-      // QR AUTO-FILL
       window.onload = () => {
         const params = new URLSearchParams(window.location.search);
         if (params.get('id')) document.getElementById('uuid').value = params.get('id');
-        if (params.get('secret'))
-          document.getElementById('ota_secret').value = params.get('secret');
+        if (params.get('secret')) document.getElementById('ota_secret').value = params.get('secret');
 
         if (!DEV_MODE) {
           const b = document.getElementById('mode-badge');
@@ -155,45 +163,59 @@
         s.innerText = msg;
       }
 
-      async function handleUpdate() {
-        // 1. First, send the standard Team Update
-        await sendTeamUpdate();
+      function sendTeamUpdate() {
+        const uuid = document.getElementById('uuid').value;
+        const team = document.getElementById('team_name').value;
+        const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
 
-        // 2. Then, check if WiFi fields are filled to send encrypted credentials
-        const ssid = document.getElementById('wifi_ssid').value;
-        const pass = document.getElementById('wifi_pass').value;
-
-        if (ssid && pass) {
-          sendEncryptedWiFi(ssid, pass);
+        if (!uuid || !team || !secret) {
+          showStatus('Missing Device ID, Team Name, or Secret', true);
+          return;
         }
+
+        const timestamp = Math.floor(Date.now() / 1000);
+        const messageToSign = `${team}:${timestamp}`;
+        const signature = CryptoJS.HmacSHA256(messageToSign, secret).toString(CryptoJS.enc.Hex);
+
+        const payload = {
+          team_name: team,
+          timestamp: timestamp,
+          signature: signature,
+        };
+
+        publishMQTT(`config/${uuid}`, payload, false);
       }
 
-      function sendEncryptedWiFi(ssid, pass) {
+      function sendEncryptedWiFi() {
         const uuid = document.getElementById('uuid').value;
+        const ssid = document.getElementById('wifi_ssid').value;
+        const pass = document.getElementById('wifi_pass').value;
         const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
+
+        if (!uuid || !ssid || !pass || !secret) {
+          showStatus('Missing WiFi details, Device ID, or Secret', true);
+          return;
+        }
 
         // Create the JSON payload
         const wifiData = JSON.stringify({ ssid: ssid, pass: pass });
 
-        // Prepare the Key (First 32 bytes of the secret)
+        // Prepare the Key (First 32 bytes of the secret for AES-256)
         const key = CryptoJS.enc.Utf8.parse(secret.substring(0, 32));
 
-        // Encrypt using AES-ECB (to match the ESP32 code we discussed)
+        // Encrypt using AES-ECB with PKCS7 padding
         const encrypted = CryptoJS.AES.encrypt(wifiData, key, {
           mode: CryptoJS.mode.ECB,
           padding: CryptoJS.pad.Pkcs7,
         });
 
-        // Convert to Hex string for the ESP32
+        // Convert to Hex string for the ESP32 logic
         const hexPayload = encrypted.ciphertext.toString(CryptoJS.enc.Hex);
 
-        // Publish to the specific wifi_update topic
-        publishMQTT(`config/wifi_update`, hexPayload, true); // Added 'isRaw' flag
+        publishMQTT(`config/wifi_update`, hexPayload, true);
       }
 
-      // Updated publishMQTT to handle different topics and raw strings
       function publishMQTT(subTopic, data, isRaw = false) {
-        const uuid = document.getElementById('uuid').value;
         const cid = 'web_' + Math.random().toString(16).substr(2, 5);
         const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
 
@@ -205,41 +227,21 @@
             const payload = isRaw ? data : JSON.stringify(data);
             const message = new Paho.MQTT.Message(payload);
 
-            // If it's the wifi update, we use the general topic, otherwise the device-specific one
-            message.destinationName = subTopic.includes('wifi_update')
-              ? `nhl_light/${subTopic}`
-              : `nhl_light/config/${uuid}`;
-
+            message.destinationName = `nhl_light/${subTopic}`;
             message.qos = 1;
             client.send(message);
-            console.log('Published to:', message.destinationName);
 
-            if (isRaw) showStatus('✅ Encrypted WiFi Credentials Sent!');
+            if (isRaw) {
+              showStatus('✅ Encrypted WiFi Credentials Sent!');
+            } else {
+              showStatus(`✅ Team update sent for ${data.team_name}!`);
+            }
+            
             setTimeout(() => client.disconnect(), 1000);
           },
           onFailure: (e) => showStatus('Connection Failed: ' + e.errorMessage, true),
         });
       }
-
-    //   function publishMQTT(uuid, data) {
-    //     const cid = 'web_' + Math.random().toString(16).substr(2, 5);
-    //     const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
-
-    //     client.connect({
-    //       useSSL: true,
-    //       userName: CREDENTIALS.mqtt_user,
-    //       password: CREDENTIALS.mqtt_pass,
-    //       onSuccess: () => {
-    //         const message = new Paho.MQTT.Message(JSON.stringify(data));
-    //         message.destinationName = `nhl_light/config/${uuid}`;
-    //         message.qos = 1;
-    //         client.send(message);
-    //         showStatus(`✅ Update sent! Goal Light is now following ${data.team_name}`);
-    //         setTimeout(() => client.disconnect(), 1000);
-    //       },
-    //       onFailure: (e) => showStatus('Connection Failed: ' + e.errorMessage, true),
-    //     });
-    //   }
     </script>
   </body>
 </html>
