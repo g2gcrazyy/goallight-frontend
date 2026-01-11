@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Web Controller</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; }
+        button { font-size: 1.2rem; padding: 10px 25px; margin: 10px; cursor: pointer; border: none; border-radius: 5px; transition: 0.3s; }
+        .on { background: #2ecc71; color: white; }
+        .off { background: #e74c3c; color: white; }
+        #status { margin-top: 20px; font-weight: bold; color: #555; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Smart Device Control</h2>
+        <p>Broker: <em>broker.emqx.io</em></p>
+        
+        <button class="on" onclick="publish('home/office/light', 'ON')">TURN ON</button>
+        <button class="off" onclick="publish('home/office/light', 'OFF')">TURN OFF</button>
+
+        <div id="status">Status: Disconnected</div>
+    </div>
+
+    <script>
+        // Settings - Using EMQX Public Broker (Websocket Port 8083)
+        const broker = "broker.emqx.io";
+        const port = 8083;
+        const clientID = "web_client_" + Math.floor(Math.random() * 10000);
+
+        const client = new Paho.MQTT.Client(broker, port, clientID);
+
+        // Connect the client
+        client.connect({
+            onSuccess: () => {
+                document.getElementById("status").innerHTML = "Status: Connected ✅";
+                document.getElementById("status").style.color = "green";
+            },
+            onFailure: (err) => {
+                document.getElementById("status").innerHTML = "Status: Connection Failed ❌";
+                console.log(err);
+            },
+            useSSL: false // Change to true and port 8084 for secure HTTPS sites
+        });
+
+        function publish(topic, payload) {
+            if (client.isConnected()) {
+                const message = new Paho.MQTT.Message(payload);
+                message.destinationName = topic;
+                client.send(message);
+                console.log(`Sent: ${payload} to ${topic}`);
+            } else {
+                alert("Client not connected!");
+            }
+        }
+    </script>
+</body>
+</html>
