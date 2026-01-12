@@ -123,7 +123,11 @@
       </div>
 
       <button class="secondary" onclick="sendEncryptedWiFi()">Update WiFi Credentials</button>
-
+      <div class="field">
+        <label>Firmware URL (.bin)</label>
+        <input type="text" id="ota_url" placeholder="https://..." />
+      </div>
+      <button class="secondary" onclick="triggerOTA()">Push Firmware Update</button>
       <div id="status"></div>
     </div>
 
@@ -154,6 +158,19 @@
           b.style.color = 'white';
         }
       };
+
+      function triggerOTA() {
+        const url = document.getElementById('ota_url').value;
+        const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
+        
+        // Sign the URL so the ESP32 knows it's from you
+        const signature = CryptoJS.HmacSHA256(url, secret).toString(CryptoJS.enc.Hex);
+        
+        const payload = { url: url, signature: signature };
+        const uuid = document.getElementById('uuid').value;
+        
+        publishMQTT(`ota/${uuid}`, payload, false);
+      }
 
       function showStatus(msg, isError = false) {
         const s = document.getElementById('status');
