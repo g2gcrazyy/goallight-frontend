@@ -195,6 +195,7 @@
         if (params.get('id')) document.getElementById('publicID').value = params.get('id');
         if (params.get('secret'))
           document.getElementById('privateSerial').value = params.get('secret');
+        if (params.get('ota')) document.getElementById('ota_url').value = params.get('ota');
 
         if (!DEV_MODE) {
           const b = document.getElementById('mode-badge');
