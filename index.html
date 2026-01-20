@@ -94,12 +94,12 @@
 
       <div class="field">
         <label>Device ID</label>
-        <input type="text" id="uuid" placeholder="e.g. 8209fb4d..." />
+        <input type="text" id="publicID" placeholder="e.g. 8209fb4d..." />
       </div>
 
       <div class="field" id="secret_field">
         <label>Security Key (OTA Secret)</label>
-        <input type="password" id="ota_secret" placeholder="Enter secret key" />
+        <input type="password" id="privateSerial" placeholder="Enter secret key" />
       </div>
 
       <div class="field">
@@ -137,7 +137,7 @@
       const CREDENTIALS = {
         mqtt_user: 'goallight',
         mqtt_pass: 'cranberryGoal5',
-        ota_secret: 'armadillo-paternity-sniff-stonework-silicon-headstone-observant',
+        privateSerial: 'armadillo-paternity-sniff-stonework-silicon-headstone-observant',
       };
 
       const BROKER = {
@@ -148,8 +148,8 @@
 
       window.onload = () => {
         const params = new URLSearchParams(window.location.search);
-        if (params.get('id')) document.getElementById('uuid').value = params.get('id');
-        if (params.get('secret')) document.getElementById('ota_secret').value = params.get('secret');
+        if (params.get('id')) document.getElementById('publicID').value = params.get('id');
+        if (params.get('secret')) document.getElementById('privateSerial').value = params.get('secret');
 
         if (!DEV_MODE) {
           const b = document.getElementById('mode-badge');
@@ -161,15 +161,15 @@
 
       function triggerOTA() {
         const url = document.getElementById('ota_url').value;
-        const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
+        const secret = document.getElementById('privateSerial').value || CREDENTIALS.privateSerial;
         
         // Sign the URL so the ESP32 knows it's from you
         const signature = CryptoJS.HmacSHA256(url, secret).toString(CryptoJS.enc.Hex);
         
         const payload = { url: url, signature: signature };
-        const uuid = document.getElementById('uuid').value;
+        const publicID = document.getElementById('publicID').value;
         
-        publishMQTT(`ota/${uuid}`, payload, false);
+        publishMQTT(`ota/${publicID}`, payload, false);
       }
 
       function showStatus(msg, isError = false) {
@@ -181,11 +181,11 @@
       }
 
       function sendTeamUpdate() {
-        const uuid = document.getElementById('uuid').value;
+        const publicID = document.getElementById('publicID').value;
         const team = document.getElementById('team_name').value;
-        const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
+        const secret = document.getElementById('privateSerial').value || CREDENTIALS.privateSerial;
 
-        if (!uuid || !team || !secret) {
+        if (!publicID || !team || !secret) {
           showStatus('Missing Device ID, Team Name, or Secret', true);
           return;
         }
@@ -200,16 +200,16 @@
           signature: signature,
         };
 
-        publishMQTT(`config/${uuid}`, payload, false);
+        publishMQTT(`config/${publicID}`, payload, false);
       }
 
       function sendEncryptedWiFi() {
-        const uuid = document.getElementById('uuid').value;
+        const publicID = document.getElementById('publicID').value;
         const ssid = document.getElementById('wifi_ssid').value;
         const pass = document.getElementById('wifi_pass').value;
-        const secret = document.getElementById('ota_secret').value || CREDENTIALS.ota_secret;
+        const secret = document.getElementById('privateSerial').value || CREDENTIALS.privateSerial;
 
-        if (!uuid || !ssid || !pass || !secret) {
+        if (!publicID || !ssid || !pass || !secret) {
           showStatus('Missing WiFi details, Device ID, or Secret', true);
           return;
         }
