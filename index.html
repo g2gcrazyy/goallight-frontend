@@ -140,6 +140,14 @@
       <button onclick="sendTeamUpdate()">Update Team</button>
 
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
+
+      <div class="field">
+        <label>Display Message</label>
+        <input type="text" id="scroll_text" placeholder="Text to scroll on display..." maxlength="30" />
+      </div>
+      <button onclick="sendScrollText()">Send to Display</button>
+
+      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
       <details style="margin-top: 20px; cursor: pointer">
         <summary style="color: #007bff; font-weight: bold; margin-bottom: 10px">Edit WiFi</summary>
 
@@ -278,7 +286,23 @@
         publishMQTT(`config/wifi_update`, hexPayload, true);
       }
 
-      function publishMQTT(subTopic, data, isRaw = false) {
+      function sendScrollText() {
+        const publicID = document.getElementById('publicID').value;
+        const text = document.getElementById('scroll_text').value.trim();
+
+        if (!publicID) {
+          showStatus('Missing Device ID', true);
+          return;
+        }
+        if (!text) {
+          showStatus('Enter some text to display', true);
+          return;
+        }
+
+        publishMQTT(`scroll/${publicID}`, text, true, `✅ Sent "${text}" to display!`);
+      }
+
+      function publishMQTT(subTopic, data, isRaw = false, successMsg = null) {
         const cid = 'web_' + Math.random().toString(16).substr(2, 5);
         const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
 
@@ -294,7 +318,9 @@
             message.qos = 1;
             client.send(message);
 
-            if (isRaw) {
+            if (successMsg) {
+              showStatus(successMsg);
+            } else if (isRaw) {
               showStatus('✅ Encrypted WiFi Credentials Sent!');
             } else {
               showStatus(`✅ Team update sent for ${data.team_name}!`);
