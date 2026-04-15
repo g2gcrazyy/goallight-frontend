@@ -117,6 +117,7 @@
         <select
           id="team_name"
           style="width: 100%; padding: 12px; border-radius: 6px; font-size: 16px"
+          onchange="updateAlertsVisibility()"
         >
           <option value="">Select a Team...</option>
           <option value="ALT">-- Alerts Mode --</option>
@@ -162,13 +163,15 @@
 
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
-      <div class="field">
-        <label>Display Message</label>
-        <input type="text" id="scroll_text" placeholder="Text to scroll on display..." maxlength="30" />
-      </div>
-      <button onclick="sendScrollText()">Send to Display</button>
+      <div id="alerts-section" style="display: none;">
+        <div class="field">
+          <label>Display Message</label>
+          <input type="text" id="scroll_text" placeholder="Text to scroll on display..." maxlength="30" />
+        </div>
+        <button onclick="sendScrollText()">Send to Display</button>
 
-      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
+      </div>
       <details style="margin-top: 20px; cursor: pointer">
         <summary style="color: #007bff; font-weight: bold; margin-bottom: 10px">Edit WiFi</summary>
 
@@ -224,6 +227,11 @@
         path: '/mqtt',
       };
 
+      function updateAlertsVisibility() {
+        const isAlerts = document.getElementById('team_name').value === 'ALT';
+        document.getElementById('alerts-section').style.display = isAlerts ? 'block' : 'none';
+      }
+
       function fetchDeviceInfo(publicID) {
         if (!publicID) return;
 
@@ -241,6 +249,7 @@
             if (info.team) {
               const sel = document.getElementById('team_name');
               sel.value = info.team;
+              updateAlertsVisibility();
             }
           } catch (e) {}
           setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
