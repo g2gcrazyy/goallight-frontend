@@ -224,9 +224,49 @@
         path: '/mqtt',
       };
 
+      function fetchDeviceInfo(publicID) {
+        if (!publicID) return;
+
+        const cid = 'web_info_' + Math.random().toString(16).substr(2, 5);
+        const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+
+        const timer = setTimeout(() => {
+          try { client.disconnect(); } catch (e) {}
+        }, 10000);
+
+        client.onMessageArrived = (msg) => {
+          clearTimeout(timer);
+          try {
+            const info = JSON.parse(msg.payloadString);
+            if (info.team) {
+              const sel = document.getElementById('team_name');
+              sel.value = info.team;
+            }
+          } catch (e) {}
+          setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
+        };
+
+        client.connect({
+          useSSL: true,
+          userName: CREDENTIALS.mqtt_user,
+          password: CREDENTIALS.mqtt_pass,
+          onSuccess: () => {
+            client.subscribe(`nhl_light/info_result/${publicID}`);
+            const msg = new Paho.MQTT.Message('info');
+            msg.destinationName = `nhl_light/info/${publicID}`;
+            msg.qos = 1;
+            client.send(msg);
+          },
+          onFailure: () => clearTimeout(timer),
+        });
+      }
+
       window.onload = () => {
         const params = new URLSearchParams(window.location.search);
-        if (params.get('id')) document.getElementById('publicID').value = params.get('id');
+        if (params.get('id')) {
+          document.getElementById('publicID').value = params.get('id');
+          fetchDeviceInfo(params.get('id'));
+        }
         if (params.get('secret'))
           document.getElementById('privateSerial').value = params.get('secret');
         if (params.get('ota')) document.getElementById('ota_url').value = params.get('ota');
@@ -237,6 +277,11 @@
           b.style.background = '#28a745';
           b.style.color = 'white';
         }
+
+        // Also fetch when Device ID is typed/pasted manually
+        document.getElementById('publicID').addEventListener('change', (e) => {
+          if (e.target.value) fetchDeviceInfo(e.target.value);
+        });
       };
 
       function triggerOTA() {
