@@ -161,6 +161,15 @@
 
       <button onclick="sendTeamUpdate()">Update Team</button>
 
+      <div class="field" style="margin-top: 20px;">
+        <label>Goal Delay (seconds)</label>
+        <div style="display: flex; gap: 8px; align-items: stretch;">
+          <input type="number" id="goal_delay" min="0" max="120" placeholder="0" style="flex: 1;" />
+          <button class="secondary icon" onclick="sendDelay()">Set</button>
+        </div>
+        <p style="margin: 4px 0 0; font-size: 0.8em; color: #888;">Delays the score update and goal flash to match your stream.</p>
+      </div>
+
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
       <div id="alerts-section" style="display: none;">
@@ -250,6 +259,9 @@
               const sel = document.getElementById('team_name');
               sel.value = info.team;
               updateAlertsVisibility();
+            }
+            if (typeof info.delay === 'number') {
+              document.getElementById('goal_delay').value = info.delay;
             }
           } catch (e) {}
           setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
@@ -425,6 +437,22 @@
             showStatus('Connection Failed: ' + e.errorMessage, true);
           },
         });
+      }
+
+      function sendDelay() {
+        const publicID = document.getElementById('publicID').value;
+        const delay = document.getElementById('goal_delay').value;
+
+        if (!publicID) {
+          showStatus('Missing Device ID', true);
+          return;
+        }
+        if (delay === '' || isNaN(delay) || delay < 0) {
+          showStatus('Enter a valid delay (0 or more seconds)', true);
+          return;
+        }
+
+        publishMQTT(`delay/${publicID}`, String(parseInt(delay)), true, `✅ Goal delay set to ${delay}s`);
       }
 
       function sendScrollText() {
