@@ -68,6 +68,26 @@
       button.secondary:hover {
         background: #5a6268;
       }
+      select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-sizing: border-box;
+        font-size: 16px;
+        background: white;
+      }
+      select:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+      }
+      button.icon {
+        width: auto;
+        padding: 12px 16px;
+        font-size: 16px;
+        margin-bottom: 0;
+      }
       #status {
         margin-top: 20px;
         padding: 15px;
@@ -154,7 +174,12 @@
 
         <div class="field">
           <label>WiFi SSID</label>
-          <input type="text" id="wifi_ssid" placeholder="Home WiFi Name" />
+          <div style="display: flex; gap: 8px; align-items: stretch;">
+            <select id="wifi_ssid" style="flex: 1;">
+              <option value="">-- Tap Scan to find networks --</option>
+            </select>
+            <button class="secondary icon" onclick="requestWifiScan()">Scan</button>
+          </div>
         </div>
 
         <div class="field">
@@ -285,6 +310,67 @@
         const hexPayload = encrypted.ciphertext.toString(CryptoJS.enc.Hex);
 
         publishMQTT(`config/wifi_update`, hexPayload, true);
+      }
+
+      function requestWifiScan() {
+        const publicID = document.getElementById('publicID').value;
+        if (!publicID) {
+          showStatus('Enter Device ID first', true);
+          return;
+        }
+
+        const select = document.getElementById('wifi_ssid');
+        select.innerHTML = '<option value="">Scanning...</option>';
+        select.disabled = true;
+
+        const cid = 'web_scan_' + Math.random().toString(16).substr(2, 5);
+        const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+
+        const timer = setTimeout(() => {
+          select.innerHTML = '<option value="">Scan timed out — try again</option>';
+          select.disabled = false;
+          try { client.disconnect(); } catch (e) {}
+        }, 15000);
+
+        client.onMessageArrived = (msg) => {
+          clearTimeout(timer);
+          try {
+            const networks = JSON.parse(msg.payloadString);
+            select.innerHTML = '<option value="">Select a network...</option>';
+            networks.forEach((n) => {
+              const opt = document.createElement('option');
+              opt.value = n.ssid;
+              opt.text = `${n.ssid}  (${n.rssi} dBm)`;
+              select.appendChild(opt);
+            });
+            if (networks.length === 0) {
+              select.innerHTML = '<option value="">No networks found</option>';
+            }
+          } catch (e) {
+            select.innerHTML = '<option value="">Error reading results</option>';
+          }
+          select.disabled = false;
+          setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
+        };
+
+        client.connect({
+          useSSL: true,
+          userName: CREDENTIALS.mqtt_user,
+          password: CREDENTIALS.mqtt_pass,
+          onSuccess: () => {
+            client.subscribe(`nhl_light/wifi_scan_result/${publicID}`);
+            const msg = new Paho.MQTT.Message('scan');
+            msg.destinationName = `nhl_light/wifi_scan/${publicID}`;
+            msg.qos = 1;
+            client.send(msg);
+          },
+          onFailure: (e) => {
+            clearTimeout(timer);
+            select.innerHTML = '<option value="">Connection failed</option>';
+            select.disabled = false;
+            showStatus('Connection Failed: ' + e.errorMessage, true);
+          },
+        });
       }
 
       function sendScrollText() {
