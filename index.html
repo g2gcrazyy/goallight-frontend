@@ -88,6 +88,43 @@
         font-size: 16px;
         margin-bottom: 0;
       }
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 26px;
+        flex-shrink: 0;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: #ccc;
+        border-radius: 26px;
+        transition: .3s;
+      }
+      .toggle-slider:before {
+        content: "";
+        position: absolute;
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: .3s;
+      }
+      .toggle-switch input:checked + .toggle-slider {
+        background: #28a745;
+      }
+      .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(22px);
+      }
       #status {
         margin-top: 20px;
         padding: 15px;
@@ -170,6 +207,17 @@
         <p style="margin: 4px 0 0; font-size: 0.8em; color: #888;">Delays the score update and goal flash to match your stream.</p>
       </div>
 
+      <div class="field" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+        <div>
+          <label style="display: block; margin-bottom: 3px;">Power Saving</label>
+          <p style="margin: 0; font-size: 0.8em; color: #888;">Off = device never sleeps, shows a dot while idle.</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="power_saving" checked onchange="sendPowerSave()" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
       <div id="alerts-section" style="display: none;">
@@ -238,7 +286,8 @@
 
       function updateAlertsVisibility() {
         const isAlerts = document.getElementById('team_name').value === 'ALT';
-        document.getElementById('alerts-section').style.display = isAlerts ? 'block' : 'none';
+        const isPowerSavingOff = !document.getElementById('power_saving').checked;
+        document.getElementById('alerts-section').style.display = (isAlerts || isPowerSavingOff) ? 'block' : 'none';
       }
 
       function fetchDeviceInfo(publicID) {
@@ -258,11 +307,14 @@
             if (info.team) {
               const sel = document.getElementById('team_name');
               sel.value = info.team;
-              updateAlertsVisibility();
             }
             if (typeof info.delay === 'number') {
               document.getElementById('goal_delay').value = info.delay;
             }
+            if (typeof info.powerSaving === 'boolean') {
+              document.getElementById('power_saving').checked = info.powerSaving;
+            }
+            updateAlertsVisibility();
           } catch (e) {}
           setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
         };
@@ -453,6 +505,25 @@
         }
 
         publishMQTT(`delay/${publicID}`, String(parseInt(delay)), true, `✅ Goal delay set to ${delay}s`);
+      }
+
+      function sendPowerSave() {
+        const publicID = document.getElementById('publicID').value;
+        const enabled = document.getElementById('power_saving').checked;
+
+        if (!publicID) {
+          showStatus('Missing Device ID', true);
+          document.getElementById('power_saving').checked = !enabled; // revert
+          return;
+        }
+
+        publishMQTT(
+          `powersave/${publicID}`,
+          enabled ? '1' : '0',
+          true,
+          `✅ Power saving ${enabled ? 'enabled' : 'disabled'}`
+        );
+        updateAlertsVisibility();
       }
 
       function sendScrollText() {
