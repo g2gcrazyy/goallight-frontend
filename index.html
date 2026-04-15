@@ -140,10 +140,110 @@
         font-size: 11px;
         float: right;
       }
+      .tab-bar {
+        display: flex;
+        gap: 4px;
+        margin: -25px -25px 20px -25px;
+        border-bottom: 2px solid #eee;
+        padding: 12px 16px 0;
+        background: #f8f9fa;
+        border-radius: 12px 12px 0 0;
+      }
+      .tab-btn {
+        background: transparent;
+        color: #888;
+        border: none;
+        border-bottom: 3px solid transparent;
+        border-radius: 0;
+        padding: 8px 16px 10px;
+        font-size: 14px;
+        font-weight: 600;
+        width: auto;
+        margin-bottom: -2px;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+      .tab-btn:hover {
+        background: transparent;
+        color: #444;
+      }
+      .tab-btn:active {
+        transform: none;
+      }
+      .tab-btn.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+        background: transparent;
+      }
+      .manual h3 {
+        font-size: 1em;
+        color: #333;
+        margin: 22px 0 6px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #eee;
+      }
+      .manual h3:first-child { margin-top: 0; }
+      .manual p {
+        font-size: 0.9em;
+        color: #555;
+        margin: 6px 0;
+      }
+      .manual ul {
+        font-size: 0.9em;
+        color: #555;
+        margin: 6px 0;
+        padding-left: 20px;
+      }
+      .manual li { margin-bottom: 4px; }
+      .manual table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875em;
+        margin: 8px 0;
+      }
+      .manual th {
+        background: #f0f4ff;
+        color: #333;
+        text-align: left;
+        padding: 7px 10px;
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .manual td {
+        padding: 7px 10px;
+        border-bottom: 1px solid #f0f0f0;
+        color: #555;
+        vertical-align: top;
+      }
+      .manual td:first-child {
+        font-family: monospace;
+        font-size: 1em;
+        font-weight: bold;
+        color: #333;
+        white-space: nowrap;
+        width: 56px;
+      }
+      .manual .tip {
+        background: #fff8e1;
+        border-left: 3px solid #ffc107;
+        padding: 10px 12px;
+        border-radius: 0 6px 6px 0;
+        font-size: 0.875em;
+        color: #555;
+        margin: 10px 0;
+      }
+      .manual .tip strong { color: #333; }
     </style>
   </head>
   <body>
     <div class="card">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-btn-control" onclick="switchTab('control')">Control</button>
+        <button class="tab-btn" id="tab-btn-manual" onclick="switchTab('manual')">User Manual</button>
+      </div>
+
+      <div id="tab-control">
       <span id="mode-badge" class="badge">DEV MODE</span>
       <h2>🚨 Goal Light Control</h2>
       <p style="color: #666; font-size: 0.9em">Update team, configure WiFi, or Update.</p>
@@ -267,6 +367,74 @@
         <button class="secondary" onclick="triggerOTA()">Push Firmware Update</button>
       </details>
       <div id="status"></div>
+      </div><!-- /tab-control -->
+
+      <div id="tab-manual" class="manual" style="display:none">
+
+        <h3>How It Works</h3>
+        <p>Your GoalLight connects to the internet and tracks your favourite NHL team's games in real time. When your team scores, the buzzer sounds and the motor spins. Between games it can rest in deep sleep and wake up automatically before puck drop.</p>
+
+        <h3>Display Reference</h3>
+        <table>
+          <tr><th>Shows</th><th>Meaning</th></tr>
+          <tr><td>3 2</td><td>Live score — your team (left) vs opponent (right)</td></tr>
+          <tr><td>FT</td><td>Puck drop in under a minute</td></tr>
+          <tr><td>FN</td><td>Game over (Final)</td></tr>
+          <tr><td>SL</td><td>Entering deep sleep</td></tr>
+          <tr><td>3d</td><td>3 days until next game <em>(power saving off)</em></td></tr>
+          <tr><td>5h</td><td>5 hours until next game <em>(power saving off)</em></td></tr>
+          <tr><td>·</td><td>Always-on idle — no game scheduled within 9 days</td></tr>
+          <tr><td>UP</td><td>Firmware update in progress</td></tr>
+          <tr><td>Er</td><td>Firmware update failed</td></tr>
+          <tr><td>OK</td><td>New WiFi credentials saved, rebooting</td></tr>
+          <tr><td>HS</td><td>Hotspot / factory reset mode active</td></tr>
+        </table>
+
+        <h3>First-Time Setup</h3>
+        <ul>
+          <li>Power on the GoalLight (USB or batteries).</li>
+          <li>If no home WiFi is saved, it connects to the emergency network <strong>"Goal"</strong> (password: <strong>12345678</strong>).</li>
+          <li>On this page, enter your <strong>Device ID</strong> in the Advanced section. The page will load your current settings automatically.</li>
+          <li>Open <strong>Edit WiFi</strong>, tap <strong>Scan</strong>, select your home network, enter the password, and tap <strong>Update WiFi Credentials</strong>.</li>
+          <li>The GoalLight saves the credentials and reboots. It will scroll the network name across the display when connected.</li>
+        </ul>
+
+        <h3>Selecting Your Team</h3>
+        <p>Choose your NHL team from the dropdown and tap <strong>Update Team</strong>. The GoalLight will immediately start tracking that team's games and score.</p>
+
+        <h3>Power Saving Mode</h3>
+        <p><strong>On (default):</strong> The device enters deep sleep while your team has no active game, then wakes up automatically about 90 seconds before puck drop.</p>
+        <p><strong>Off:</strong> The device stays on at all times. While waiting for a game it counts down — showing days (<strong>3d</strong>) or hours (<strong>7h</strong>) — or a dot (·) if no game is scheduled within the next 9 days. Display messages can be sent at any time.</p>
+        <div class="tip">
+          <strong>Waking from deep sleep early:</strong> Deep sleep can only be ended by removing all power. Unplug the USB cable <em>and</em> remove the batteries, wait <strong>30 seconds</strong>, then power back on. The device will be in its 90-second setup window before resuming normal operation.
+        </div>
+
+        <h3>90-Second Setup Window</h3>
+        <p>Every time the GoalLight powers on, it stays awake for <strong>90 seconds</strong> regardless of the game schedule. This gives you a window to change settings, send a display message, or confirm it is online before it potentially goes back to sleep.</p>
+
+        <h3>Goal Delay</h3>
+        <p>Streaming services typically add a few seconds of delay between when a goal happens and when it appears on your screen. Set the <strong>Goal Delay</strong> (in seconds) to match your stream lag — the buzzer and motor will fire at the exact moment the goal appears on your TV.</p>
+
+        <h3>Display Messages</h3>
+        <p>When Power Saving is <strong>off</strong>, a <strong>Send to Display</strong> field is always visible. Any text you send will scroll across the 7-segment display, then the device returns to showing the countdown or dot. The goal buzzer fires before the message appears.</p>
+        <p>If you select <strong>Alerts Mode</strong> as your team, this feature is available even with Power Saving on, and the device never enters deep sleep.</p>
+
+        <h3>The Button (on the device)</h3>
+        <ul>
+          <li><strong>Short press:</strong> Sends a sync request to refresh the current score immediately.</li>
+          <li><strong>Hold 5 seconds:</strong> Factory reset. The display counts down <strong>5 → 4 → 3 → 2 → 1</strong>, then shows <strong>HS</strong>. Saved WiFi credentials are erased and the device reconnects to the "Goal" emergency hotspot. You will need to re-enter your WiFi details.</li>
+        </ul>
+
+        <h3>Troubleshooting</h3>
+        <ul>
+          <li><strong>Score not updating</strong> — Short-press the button to request a refresh from the server.</li>
+          <li><strong>Missed a goal while sleeping</strong> — The GoalLight syncs the current score on its next connection. It only flashes for goals it was online to receive.</li>
+          <li><strong>Device asleep and won't wake</strong> — Unplug USB <em>and</em> remove batteries, wait 30 seconds, then power back on.</li>
+          <li><strong>Device not connecting to WiFi</strong> — Hold the button 5 seconds to factory reset, then re-enter your WiFi credentials via this page.</li>
+          <li><strong>Display shows Er</strong> — OTA firmware update failed. Check the firmware URL and try again.</li>
+        </ul>
+
+      </div><!-- /tab-manual -->
     </div>
 
     <script>
@@ -283,6 +451,13 @@
         port: 8884,
         path: '/mqtt',
       };
+
+      function switchTab(name) {
+        document.getElementById('tab-control').style.display = name === 'control' ? 'block' : 'none';
+        document.getElementById('tab-manual').style.display  = name === 'manual'  ? 'block' : 'none';
+        document.getElementById('tab-btn-control').classList.toggle('active', name === 'control');
+        document.getElementById('tab-btn-manual').classList.toggle('active',  name === 'manual');
+      }
 
       function updateAlertsVisibility() {
         const isAlerts = document.getElementById('team_name').value === 'ALT';
