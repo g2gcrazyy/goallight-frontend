@@ -489,28 +489,35 @@
 
         const cid = 'web_info_' + Math.random().toString(16).substr(2, 5);
         const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+        let gotInfo = false, gotFirmware = false;
+
+        const tryDisconnect = () => {
+          if (gotInfo && gotFirmware) {
+            clearTimeout(timer);
+            setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
+          }
+        };
 
         const timer = setTimeout(() => {
           try { client.disconnect(); } catch (e) {}
         }, 10000);
 
         client.onMessageArrived = (msg) => {
-          clearTimeout(timer);
           try {
-            const info = JSON.parse(msg.payloadString);
-            if (info.team) {
-              const sel = document.getElementById('team_name');
-              sel.value = info.team;
+            if (msg.destinationName === `nhl_light/info_result/${publicID}`) {
+              const info = JSON.parse(msg.payloadString);
+              if (info.team) document.getElementById('team_name').value = info.team;
+              if (typeof info.delay === 'number') document.getElementById('goal_delay').value = info.delay;
+              if (typeof info.powerSaving === 'boolean') document.getElementById('power_saving').checked = info.powerSaving;
+              updateAlertsVisibility();
+              gotInfo = true;
+            } else if (msg.destinationName === `nhl_light/firmware_result/${publicID}`) {
+              const fw = JSON.parse(msg.payloadString);
+              if (fw.url) document.getElementById('ota_url').value = fw.url;
+              gotFirmware = true;
             }
-            if (typeof info.delay === 'number') {
-              document.getElementById('goal_delay').value = info.delay;
-            }
-            if (typeof info.powerSaving === 'boolean') {
-              document.getElementById('power_saving').checked = info.powerSaving;
-            }
-            updateAlertsVisibility();
           } catch (e) {}
-          setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
+          tryDisconnect();
         };
 
         client.connect({
@@ -519,10 +526,17 @@
           password: CREDENTIALS.mqtt_pass,
           onSuccess: () => {
             client.subscribe(`nhl_light/info_result/${publicID}`);
-            const msg = new Paho.MQTT.Message('info');
-            msg.destinationName = `nhl_light/info/${publicID}`;
-            msg.qos = 1;
-            client.send(msg);
+            client.subscribe(`nhl_light/firmware_result/${publicID}`);
+
+            const infoMsg = new Paho.MQTT.Message('info');
+            infoMsg.destinationName = `nhl_light/info/${publicID}`;
+            infoMsg.qos = 1;
+            client.send(infoMsg);
+
+            const fwMsg = new Paho.MQTT.Message(JSON.stringify({ publicID }));
+            fwMsg.destinationName = 'nhl_light/firmware_request';
+            fwMsg.qos = 1;
+            client.send(fwMsg);
           },
           onFailure: () => clearTimeout(timer),
         });
