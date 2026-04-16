@@ -422,15 +422,28 @@
         <h3>The Button (on the device)</h3>
         <ul>
           <li><strong>Short press:</strong> Sends a sync request to refresh the current score immediately.</li>
-          <li><strong>Hold 5 seconds:</strong> Factory reset. The display counts down <strong>5 → 4 → 3 → 2 → 1</strong>, then shows <strong>HS</strong>. Saved WiFi credentials are erased and the device reconnects to the "Goal" emergency hotspot. You will need to re-enter your WiFi details.</li>
+          <li><strong>Hold 5 seconds:</strong> Factory reset. The display counts down <strong>5 → 4 → 3 → 2 → 1</strong>, then shows <strong>HS</strong> and begins the reset sequence below.</li>
         </ul>
+
+        <h3>Factory Reset — Auto WiFi Search</h3>
+        <p>When a factory reset is triggered, the GoalLight does not immediately fall back to the emergency network. Instead it tries to find a working connection on its own:</p>
+        <ol style="font-size:0.9em; color:#555; padding-left:20px; margin: 6px 0;">
+          <li>Saved WiFi credentials are erased.</li>
+          <li>A WiFi scan runs automatically (display shows <strong>HS</strong>).</li>
+          <li>The three strongest nearby networks are tried one at a time using the password <strong>12345678</strong>. The display shows the attempt number (<strong> 1</strong>, <strong> 2</strong>, <strong> 3</strong>) during each try.</li>
+          <li>The first network that accepts the password is saved and used going forward.</li>
+          <li>If all three attempts fail, the device connects to the emergency network <strong>"Goal"</strong> (password: <strong>12345678</strong>) so you can re-enter your credentials via this page.</li>
+        </ol>
+        <div class="tip">
+          <strong>Tip:</strong> If your home WiFi password is <strong>12345678</strong>, factory reset will find and reconnect to it automatically without any further setup.
+        </div>
 
         <h3>Troubleshooting</h3>
         <ul>
           <li><strong>Score not updating</strong> — Short-press the button to request a refresh from the server.</li>
           <li><strong>Missed a goal while sleeping</strong> — The GoalLight syncs the current score on its next connection. It only flashes for goals it was online to receive.</li>
           <li><strong>Device asleep and won't wake</strong> — Unplug USB <em>and</em> remove batteries, wait 30 seconds, then power back on.</li>
-          <li><strong>Device not connecting to WiFi</strong> — Hold the button 5 seconds to factory reset, then re-enter your WiFi credentials via this page.</li>
+          <li><strong>Device not connecting to WiFi</strong> — Hold the button 5 seconds to factory reset. The device will scan and try the three strongest nearby networks with password <strong>12345678</strong>. If none work, it falls back to the <strong>"Goal"</strong> emergency network where you can re-enter credentials via this page.</li>
           <li><strong>Display shows Er</strong> — OTA firmware update failed. Check the firmware URL and try again.</li>
         </ul>
 
