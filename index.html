@@ -247,6 +247,17 @@
       <span id="mode-badge" class="badge">DEV MODE</span>
       <h2>🚨 Goal Light Control</h2>
       <p style="color: #666; font-size: 0.9em">Update team, configure WiFi, or Update.</p>
+
+      <div id="update-banner" style="display:none; background:#fff3cd; border:1px solid #ffc107; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:0.875em; color:#555;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div>
+            <strong style="color:#333;">Firmware update available</strong><br>
+            Device is on <strong id="banner-current-ver">v?</strong> — latest is <strong id="banner-latest-ver">v?</strong>
+          </div>
+          <button class="secondary icon" onclick="openAdvancedForOTA()" style="white-space:nowrap; font-size:13px; padding:8px 12px;">Update Now</button>
+        </div>
+      </div>
+
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
       <div class="field">
@@ -471,6 +482,38 @@
         path: '/mqtt',
       };
 
+      // Compares semver strings. Returns true if `latest` is newer than `current`.
+      function isNewerVersion(latest, current) {
+        if (!latest || !current) return false;
+        const parse = v => v.replace(/^v/, '').split('.').map(Number);
+        const [la, lb, lc] = parse(latest);
+        const [ca, cb, cc] = parse(current);
+        if (la !== ca) return la > ca;
+        if (lb !== cb) return lb > cb;
+        return lc > cc;
+      }
+
+      function checkForUpdate(deviceVersion, latestVersion) {
+        const banner = document.getElementById('update-banner');
+        if (isNewerVersion(latestVersion, deviceVersion)) {
+          document.getElementById('banner-current-ver').textContent = 'v' + deviceVersion;
+          document.getElementById('banner-latest-ver').textContent  = 'v' + latestVersion;
+          banner.style.display = 'block';
+        } else {
+          banner.style.display = 'none';
+        }
+      }
+
+      function openAdvancedForOTA() {
+        // Open the Advanced details panel and scroll the OTA button into view
+        const details = document.querySelectorAll('details');
+        details.forEach(d => { if (d.querySelector('#ota_url')) d.open = true; });
+        setTimeout(() => {
+          const el = document.getElementById('ota_url');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+
       function switchTab(name) {
         document.getElementById('tab-control').style.display = name === 'control' ? 'block' : 'none';
         document.getElementById('tab-manual').style.display  = name === 'manual'  ? 'block' : 'none';
@@ -490,15 +533,19 @@
         const cid = 'web_info_' + Math.random().toString(16).substr(2, 5);
         const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
         let gotInfo = false, gotFirmware = false;
+        let deviceVersion = null, latestVersion = null;
 
         const tryDisconnect = () => {
           if (gotInfo && gotFirmware) {
             clearTimeout(timer);
+            checkForUpdate(deviceVersion, latestVersion);
             setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
           }
         };
 
         const timer = setTimeout(() => {
+          // Timeout — check with whatever we have
+          checkForUpdate(deviceVersion, latestVersion);
           try { client.disconnect(); } catch (e) {}
         }, 10000);
 
@@ -509,11 +556,13 @@
               if (info.team) document.getElementById('team_name').value = info.team;
               if (typeof info.delay === 'number') document.getElementById('goal_delay').value = info.delay;
               if (typeof info.powerSaving === 'boolean') document.getElementById('power_saving').checked = info.powerSaving;
+              if (info.version) deviceVersion = info.version;
               updateAlertsVisibility();
               gotInfo = true;
             } else if (msg.destinationName === `nhl_light/firmware_result/${publicID}`) {
               const fw = JSON.parse(msg.payloadString);
               if (fw.url) document.getElementById('ota_url').value = fw.url;
+              if (fw.version) latestVersion = fw.version;
               gotFirmware = true;
             }
           } catch (e) {}
