@@ -363,6 +363,10 @@
       <details style="margin-top: 20px; cursor: pointer">
         <summary style="color: #007bff; font-weight: bold; margin-bottom: 10px">Advanced</summary>
         <div class="field">
+          <label>Current Firmware</label>
+          <input type="text" id="current_fw" placeholder="checking..." readonly style="background:#f5f5f5;color:#555;" />
+        </div>
+        <div class="field">
           <label>Device ID</label>
           <input type="text" id="publicID" placeholder="e.g. 8209fb4d..." />
         </div>
@@ -556,7 +560,7 @@
               if (info.team) document.getElementById('team_name').value = info.team;
               if (typeof info.delay === 'number') document.getElementById('goal_delay').value = info.delay;
               if (typeof info.powerSaving === 'boolean') document.getElementById('power_saving').checked = info.powerSaving;
-              if (info.version) deviceVersion = info.version;
+              if (info.version) { deviceVersion = info.version; var _fw=document.getElementById("current_fw"); if(_fw) _fw.value = "v"+info.version; }
               updateAlertsVisibility();
               gotInfo = true;
             } else if (msg.destinationName === `nhl_light/firmware_result/${publicID}`) {
