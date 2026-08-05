@@ -475,8 +475,8 @@
       // CONFIG
       const DEV_MODE = false;
       const CREDENTIALS = {
-        mqtt_user: 'goallight',
-        mqtt_pass: 'cranberryGoal5',
+        mqtt_user: 'goallight-web',
+        mqtt_pass: '51c3S#HSrWzSCQ',
         privateSerial: 'armadillo-paternity-sniff-stonework-silicon-headstone-observant',
       };
 
@@ -555,16 +555,17 @@
 
         client.onMessageArrived = (msg) => {
           try {
-            if (msg.destinationName === `nhl_light/info_result/${publicID}`) {
-              const info = JSON.parse(msg.payloadString);
+            const res = JSON.parse(msg.payloadString);
+            if (res.type === 'info') {
+              const info = res.data;
               if (info.team) document.getElementById('team_name').value = info.team;
               if (typeof info.delay === 'number') document.getElementById('goal_delay').value = info.delay;
               if (typeof info.powerSaving === 'boolean') document.getElementById('power_saving').checked = info.powerSaving;
               if (info.version) { deviceVersion = info.version; var _fw=document.getElementById("current_fw"); if(_fw) _fw.value = "v"+info.version; }
               updateAlertsVisibility();
               gotInfo = true;
-            } else if (msg.destinationName === `nhl_light/firmware_result/${publicID}`) {
-              const fw = JSON.parse(msg.payloadString);
+            } else if (res.type === 'firmware') {
+              const fw = res.data;
               if (fw.url) document.getElementById('ota_url').value = fw.url;
               if (fw.version) latestVersion = fw.version;
               gotFirmware = true;
@@ -578,18 +579,15 @@
           userName: CREDENTIALS.mqtt_user,
           password: CREDENTIALS.mqtt_pass,
           onSuccess: () => {
-            client.subscribe(`nhl_light/info_result/${publicID}`);
-            client.subscribe(`nhl_light/firmware_result/${publicID}`);
-
-            const infoMsg = new Paho.MQTT.Message('info');
-            infoMsg.destinationName = `nhl_light/info/${publicID}`;
-            infoMsg.qos = 1;
-            client.send(infoMsg);
-
-            const fwMsg = new Paho.MQTT.Message(JSON.stringify({ publicID }));
-            fwMsg.destinationName = 'nhl_light/firmware_request';
-            fwMsg.qos = 1;
-            client.send(fwMsg);
+            client.subscribe(`nhl_light/req/out/${publicID}`);
+            const send = (cmd, payloadStr) => {
+              const m = new Paho.MQTT.Message(buildRequest(publicID, cmd, payloadStr));
+              m.destinationName = 'nhl_light/req/in';
+              m.qos = 1;
+              client.send(m);
+            };
+            send('info', '{}');
+            send('firmware', '');
           },
           onFailure: () => clearTimeout(timer),
         });
@@ -597,12 +595,12 @@
 
       window.onload = () => {
         const params = new URLSearchParams(window.location.search);
+        if (params.get('secret'))
+          document.getElementById('privateSerial').value = params.get('secret');
         if (params.get('id')) {
           document.getElementById('publicID').value = params.get('id');
           fetchDeviceInfo(params.get('id'));
         }
-        if (params.get('secret'))
-          document.getElementById('privateSerial').value = params.get('secret');
         if (params.get('ota')) document.getElementById('ota_url').value = params.get('ota');
 
         if (!DEV_MODE) {
@@ -714,7 +712,8 @@
         client.onMessageArrived = (msg) => {
           clearTimeout(timer);
           try {
-            const networks = JSON.parse(msg.payloadString);
+            const res = JSON.parse(msg.payloadString);
+            const networks = res.type === 'wifi_scan' ? res.data : [];
             select.innerHTML = '<option value="">Select a network...</option>';
             networks.forEach((n) => {
               const opt = document.createElement('option');
@@ -737,11 +736,11 @@
           userName: CREDENTIALS.mqtt_user,
           password: CREDENTIALS.mqtt_pass,
           onSuccess: () => {
-            client.subscribe(`nhl_light/wifi_scan_result/${publicID}`);
-            const msg = new Paho.MQTT.Message('scan');
-            msg.destinationName = `nhl_light/wifi_scan/${publicID}`;
-            msg.qos = 1;
-            client.send(msg);
+            client.subscribe(`nhl_light/req/out/${publicID}`);
+            const m = new Paho.MQTT.Message(buildRequest(publicID, 'wifi_scan', 'scan'));
+            m.destinationName = 'nhl_light/req/in';
+            m.qos = 1;
+            client.send(m);
           },
           onFailure: (e) => {
             clearTimeout(timer);
@@ -803,30 +802,42 @@
         publishMQTT(`scroll/${publicID}`, text, true, `✅ Sent "${text}" to display!`);
       }
 
+      // Device secret (from the ?secret= QR param); used only as an HMAC key, never sent.
+      function getSecret() {
+        return document.getElementById('privateSerial').value || CREDENTIALS.privateSerial;
+      }
+      // Sign {publicID|cmd|payload|ts} with the secret and wrap as a bridge request.
+      function buildRequest(publicID, cmd, payloadStr) {
+        const ts = Math.floor(Date.now() / 1000);
+        const sig = CryptoJS.HmacSHA256(`${publicID}|${cmd}|${payloadStr}|${ts}`, getSecret()).toString(CryptoJS.enc.Hex);
+        return JSON.stringify({ publicID, cmd, payload: payloadStr, ts, sig });
+      }
+      function cmdFromSubTopic(subTopic) {
+        if (subTopic.startsWith('config/wifi_update')) return 'wifi_update';
+        const head = subTopic.split('/')[0];
+        return { scroll: 'scroll', ota: 'ota', config: 'team', delay: 'delay', powersave: 'powersave', wifi_scan: 'wifi_scan' }[head] || head;
+      }
+
+      // Commands now go to the bridge (nhl_light/req/in) as a signed request. The
+      // public goallight-web credential cannot touch device topics directly.
       function publishMQTT(subTopic, data, isRaw = false, successMsg = null) {
+        const publicID = document.getElementById('publicID').value;
+        const cmd = cmdFromSubTopic(subTopic);
+        const payloadStr = isRaw ? String(data) : JSON.stringify(data);
+        const req = buildRequest(publicID, cmd, payloadStr);
+
         const cid = 'web_' + Math.random().toString(16).substr(2, 5);
         const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
-
         client.connect({
           useSSL: true,
           userName: CREDENTIALS.mqtt_user,
           password: CREDENTIALS.mqtt_pass,
           onSuccess: () => {
-            const payload = isRaw ? data : JSON.stringify(data);
-            const message = new Paho.MQTT.Message(payload);
-
-            message.destinationName = `nhl_light/${subTopic}`;
+            const message = new Paho.MQTT.Message(req);
+            message.destinationName = 'nhl_light/req/in';
             message.qos = 1;
             client.send(message);
-
-            if (successMsg) {
-              showStatus(successMsg);
-            } else if (isRaw) {
-              showStatus('✅ Encrypted WiFi Credentials Sent!');
-            } else {
-              showStatus(`✅ Team update sent for ${data.team_name}!`);
-            }
-
+            showStatus(successMsg || '✅ Sent!');
             setTimeout(() => client.disconnect(), 1000);
           },
           onFailure: (e) => showStatus('Connection Failed: ' + e.errorMessage, true),
