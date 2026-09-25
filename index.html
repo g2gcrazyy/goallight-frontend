@@ -383,6 +383,30 @@
 
       <div id="tab-manual" class="manual" style="display:none">
 
+        <h3>First-Time Setup</h3>
+        <p>This page should have been opened from a personalised link — your Device ID is already filled in automatically. Follow these steps to get connected:</p>
+        <div class="tip">
+          <strong>⚠️ The GoalLight only supports 2.4 GHz WiFi.</strong> Newer phones create their hotspot on 5 GHz by default, so you must turn on the 2.4 GHz / compatibility option or the light can't connect:
+          <ul style="margin:6px 0 0; padding-left:18px;">
+            <li><strong>iPhone:</strong> Settings → Personal Hotspot → turn on <strong>Maximize Compatibility</strong>.</li>
+            <li><strong>Android:</strong> Settings → Hotspot &amp; tethering → Wi-Fi hotspot → set <strong>AP Band</strong> to <strong>2.4 GHz</strong> (sometimes labelled "Extend compatibility" or "Use legacy Wi-Fi").</li>
+          </ul>
+          Your home WiFi must also broadcast a 2.4 GHz band (most do).
+        </div>
+        <ol style="font-size:0.9em; color:#555; padding-left:20px; margin: 6px 0;">
+          <li>Power on the GoalLight (USB or batteries).</li>
+          <li>On your phone, turn on your <strong>Personal Hotspot</strong> (with 2.4 GHz compatibility enabled, as above) and set the password to <strong>12345678</strong>.</li>
+          <li>Hold the button on the GoalLight for <strong>5 seconds</strong> until the display counts down and shows <strong>HS</strong>. This triggers a WiFi scan and the device will try to connect to the strongest nearby network using the password 12345678 — which is your hotspot.</li>
+          <li>Wait until your phone's hotspot name scrolls across the GoalLight display. This confirms it has connected successfully.</li>
+          <li>On this page, go to the <strong>Control</strong> tab and open <strong>Edit WiFi</strong>.</li>
+          <li>Tap <strong>Scan</strong>, select your home WiFi network from the dropdown, enter your home WiFi password, and tap <strong>Update WiFi Credentials</strong>.</li>
+          <li>The GoalLight will save the credentials and reboot. When your home WiFi name scrolls across the display, setup is complete.</li>
+        </ol>
+        <div class="tip">
+          <strong>You can now turn off your phone hotspot.</strong> The GoalLight will connect to your home WiFi automatically from this point on.
+        </div>
+
+
         <h3>How It Works</h3>
         <p>Your GoalLight connects to the internet and tracks your favourite NHL team's games in real time. When your team scores, the buzzer sounds and the motor spins. Between games it can rest in deep sleep and wake up automatically before puck drop.</p>
 
@@ -401,21 +425,6 @@
           <tr><td>OK</td><td>New WiFi credentials saved, rebooting</td></tr>
           <tr><td>HS</td><td>Hotspot / factory reset mode active</td></tr>
         </table>
-
-        <h3>First-Time Setup</h3>
-        <p>This page should have been opened from a personalised link — your Device ID is already filled in automatically. Follow these steps to get connected:</p>
-        <ol style="font-size:0.9em; color:#555; padding-left:20px; margin: 6px 0;">
-          <li>Power on the GoalLight (USB or batteries).</li>
-          <li>On your phone, turn on your <strong>Personal Hotspot</strong> and set the password to <strong>12345678</strong>.</li>
-          <li>Hold the button on the GoalLight for <strong>5 seconds</strong> until the display counts down and shows <strong>HS</strong>. This triggers a WiFi scan and the device will try to connect to the strongest nearby network using the password 12345678 — which is your hotspot.</li>
-          <li>Wait until your phone's hotspot name scrolls across the GoalLight display. This confirms it has connected successfully.</li>
-          <li>On this page, go to the <strong>Control</strong> tab and open <strong>Edit WiFi</strong>.</li>
-          <li>Tap <strong>Scan</strong>, select your home WiFi network from the dropdown, enter your home WiFi password, and tap <strong>Update WiFi Credentials</strong>.</li>
-          <li>The GoalLight will save the credentials and reboot. When your home WiFi name scrolls across the display, setup is complete.</li>
-        </ol>
-        <div class="tip">
-          <strong>You can now turn off your phone hotspot.</strong> The GoalLight will connect to your home WiFi automatically from this point on.
-        </div>
 
         <h3>Selecting Your Team</h3>
         <p>Choose your NHL team from the dropdown and tap <strong>Update Team</strong>. The GoalLight will immediately start tracking that team's games and score.</p>
