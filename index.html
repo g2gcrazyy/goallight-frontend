@@ -555,6 +555,7 @@
 
         const timer = setTimeout(() => {
           // Timeout — check with whatever we have
+          if (!gotInfo) showBlockedWarning();
           checkForUpdate(deviceVersion, latestVersion);
           try { client.disconnect(); } catch (e) {}
         }, 10000);
@@ -595,7 +596,7 @@
             send('info', '{}');
             send('firmware', '');
           },
-          onFailure: () => clearTimeout(timer),
+          onFailure: () => { clearTimeout(timer); showBlockedWarning(); },
         });
       }
 
@@ -633,6 +634,16 @@
         const publicID = document.getElementById('publicID').value;
 
         publishMQTT(`ota/${publicID}`, payload, false);
+      }
+
+      function showBlockedWarning() {
+        if (document.getElementById('blockToast')) return;
+        var t = document.createElement('div');
+        t.id = 'blockToast';
+        t.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;padding:14px 44px 14px 16px;font:15px/1.45 system-ui,-apple-system,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,.3)';
+        t.innerHTML = '<strong>⚠️ Can’t reach the GoalLight server.</strong> This is almost always an <strong>ad blocker</strong> (such as uBlock Origin) blocking the connection to <code>goallight.duckdns.org</code>. Turn your ad blocker off for this page (or allowlist that address), then reload.<span id="blockToastX" style="position:absolute;top:6px;right:14px;cursor:pointer;font-size:24px;line-height:1">&times;</span>';
+        document.body.appendChild(t);
+        document.getElementById('blockToastX').onclick = function () { t.remove(); };
       }
 
       function showStatus(msg, isError = false) {
@@ -750,7 +761,7 @@
           },
           onFailure: (e) => {
             clearTimeout(timer);
-            select.innerHTML = '<option value="">Connection failed</option>';
+            select.innerHTML = '<option value="">Connection failed</option>'; showBlockedWarning();
             select.disabled = false;
             showStatus('Connection Failed: ' + e.errorMessage, true);
           },
@@ -846,7 +857,7 @@
             showStatus(successMsg || '✅ Sent!');
             setTimeout(() => client.disconnect(), 1000);
           },
-          onFailure: (e) => showStatus('Connection Failed: ' + e.errorMessage, true),
+          onFailure: (e) => { showStatus('Connection Failed: ' + e.errorMessage, true); showBlockedWarning(); },
         });
       }
     </script>
