@@ -88,6 +88,52 @@
         font-size: 16px;
         margin-bottom: 0;
       }
+      /* Custom (non-native) SSID dropdown */
+      .dd { position: relative; }
+      .dd-trigger {
+        width: 100%;
+        margin-bottom: 0;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-sizing: border-box;
+        background: white;
+        color: #333;
+        font-size: 16px;
+        font-weight: normal;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .dd-trigger:hover { background: white; }
+      .dd-trigger:active { transform: none; }
+      .dd-trigger[aria-expanded='true'] {
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+      }
+      .dd-trigger:disabled { background: #f5f5f5; color: #999; cursor: default; }
+      .dd-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .dd-caret { color: #888; font-size: 12px; flex-shrink: 0; }
+      .dd-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        margin: 0;
+        padding: 4px 0;
+        list-style: none;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        max-height: 240px;
+        overflow-y: auto;
+        z-index: 1000;
+      }
+      .dd-menu li { padding: 12px; font-size: 16px; cursor: pointer; }
+      .dd-menu li:hover { background: #f0f4ff; }
       .toggle-switch {
         position: relative;
         display: inline-block;
@@ -343,9 +389,14 @@
         <div class="field">
           <label>WiFi SSID</label>
           <div style="display: flex; gap: 8px; align-items: stretch;">
-            <select id="wifi_ssid" style="flex: 1;">
-              <option value="">-- Tap Scan to find networks --</option>
-            </select>
+            <div class="dd" style="flex: 1;">
+              <input type="hidden" id="wifi_ssid" value="" />
+              <button type="button" id="wifi_dd_trigger" class="dd-trigger" onclick="toggleWifiDropdown()" aria-haspopup="listbox" aria-expanded="false" disabled>
+                <span id="wifi_dd_label" class="dd-label">-- Tap Scan to find networks --</span>
+                <span class="dd-caret" aria-hidden="true">▾</span>
+              </button>
+              <ul id="wifi_dd_menu" class="dd-menu" role="listbox" hidden></ul>
+            </div>
             <button class="secondary icon" onclick="requestWifiScan()">Scan</button>
           </div>
         </div>
@@ -706,6 +757,70 @@
         publishMQTT(`config/wifi_update`, hexPayload, true);
       }
 
+      // ---- Custom WiFi SSID dropdown (replaces the native <select> so results can be
+      //      shown and opened programmatically after an async scan) ----
+      function wifiDD() {
+        return {
+          trigger: document.getElementById('wifi_dd_trigger'),
+          label: document.getElementById('wifi_dd_label'),
+          menu: document.getElementById('wifi_dd_menu'),
+          hidden: document.getElementById('wifi_ssid'),
+        };
+      }
+      function setWifiPlaceholder(text) {
+        const d = wifiDD();
+        d.hidden.value = '';
+        d.label.textContent = text;
+        d.menu.innerHTML = '';
+        d.menu.hidden = true;
+        d.trigger.disabled = true; // nothing to pick
+        d.trigger.setAttribute('aria-expanded', 'false');
+      }
+      function setWifiNetworks(networks) {
+        const d = wifiDD();
+        d.hidden.value = '';
+        d.menu.innerHTML = '';
+        networks.forEach((n) => {
+          const li = document.createElement('li');
+          li.setAttribute('role', 'option');
+          li.textContent = `${n.ssid}  (${n.rssi} dBm)`;
+          li.onclick = () => selectWifiNetwork(n.ssid, li.textContent);
+          d.menu.appendChild(li);
+        });
+        d.label.textContent = 'Select a network...';
+        d.trigger.disabled = false;
+      }
+      function selectWifiNetwork(ssid, labelText) {
+        const d = wifiDD();
+        d.hidden.value = ssid;
+        d.label.textContent = labelText;
+        closeWifiDropdown();
+      }
+      function openWifiDropdown() {
+        const d = wifiDD();
+        if (d.trigger.disabled || d.menu.children.length === 0) return;
+        d.menu.hidden = false;
+        d.trigger.setAttribute('aria-expanded', 'true');
+      }
+      function closeWifiDropdown() {
+        const d = wifiDD();
+        if (!d.menu) return;
+        d.menu.hidden = true;
+        d.trigger.setAttribute('aria-expanded', 'false');
+      }
+      function toggleWifiDropdown() {
+        const d = wifiDD();
+        if (d.menu.hidden) openWifiDropdown();
+        else closeWifiDropdown();
+      }
+      // Close the dropdown when tapping/clicking outside it
+      document.addEventListener('click', (e) => {
+        const trigger = document.getElementById('wifi_dd_trigger');
+        const menu = document.getElementById('wifi_dd_menu');
+        if (!trigger || !menu) return;
+        if (!trigger.contains(e.target) && !menu.contains(e.target)) closeWifiDropdown();
+      });
+
       function requestWifiScan() {
         const publicID = document.getElementById('publicID').value;
         if (!publicID) {
@@ -713,16 +828,13 @@
           return;
         }
 
-        const select = document.getElementById('wifi_ssid');
-        select.innerHTML = '<option value="">Scanning...</option>';
-        select.disabled = true;
+        setWifiPlaceholder('Scanning...');
 
         const cid = 'web_scan_' + Math.random().toString(16).substr(2, 5);
         const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
 
         const timer = setTimeout(() => {
-          select.innerHTML = '<option value="">Scan timed out — try again</option>';
-          select.disabled = false;
+          setWifiPlaceholder('Scan timed out — try again');
           try { client.disconnect(); } catch (e) {}
         }, 15000);
 
@@ -731,28 +843,14 @@
           try {
             const res = JSON.parse(msg.payloadString);
             const networks = res.type === 'wifi_scan' ? res.data : [];
-            select.innerHTML = '<option value="">Select a network...</option>';
-            networks.forEach((n) => {
-              const opt = document.createElement('option');
-              opt.value = n.ssid;
-              opt.text = `${n.ssid}  (${n.rssi} dBm)`;
-              select.appendChild(opt);
-            });
-            if (networks.length === 0) {
-              select.innerHTML = '<option value="">No networks found</option>';
+            if (networks.length > 0) {
+              setWifiNetworks(networks);
+              openWifiDropdown(); // auto-open now that results are in
+            } else {
+              setWifiPlaceholder('No networks found');
             }
           } catch (e) {
-            select.innerHTML = '<option value="">Error reading results</option>';
-          }
-          select.disabled = false;
-          // Auto-open the dropdown so the user can pick immediately once the scan
-          // finishes. Only when real networks were found; best-effort (showPicker
-          // needs a recent user gesture + browser support, else it silently no-ops).
-          if (select.options.length > 1) {
-            try {
-              select.focus();
-              if (typeof select.showPicker === 'function') select.showPicker();
-            } catch (e) {}
+            setWifiPlaceholder('Error reading results');
           }
           setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
         };
@@ -770,8 +868,7 @@
           },
           onFailure: (e) => {
             clearTimeout(timer);
-            select.innerHTML = '<option value="">Connection failed</option>'; showBlockedWarning();
-            select.disabled = false;
+            setWifiPlaceholder('Connection failed'); showBlockedWarning();
             showStatus('Connection Failed: ' + e.errorMessage, true);
           },
         });
