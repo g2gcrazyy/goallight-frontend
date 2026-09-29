@@ -745,6 +745,15 @@
             select.innerHTML = '<option value="">Error reading results</option>';
           }
           select.disabled = false;
+          // Auto-open the dropdown so the user can pick immediately once the scan
+          // finishes. Only when real networks were found; best-effort (showPicker
+          // needs a recent user gesture + browser support, else it silently no-ops).
+          if (select.options.length > 1) {
+            try {
+              select.focus();
+              if (typeof select.showPicker === 'function') select.showPicker();
+            } catch (e) {}
+          }
           setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
         };
 
