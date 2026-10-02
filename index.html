@@ -510,10 +510,13 @@
         <div class="tip">
           <strong>You can now turn off your phone hotspot.</strong> The GoalLight will connect to your home WiFi automatically from this point on.
         </div>
+        <div class="tip">
+          <strong>Entered the wrong WiFi password?</strong> No problem — the light will show <strong>FAILED</strong>, reconnect to your hotspot on its own, and wait. Just open <strong>Edit WiFi</strong> again and send the correct password. No factory reset needed.
+        </div>
 
 
         <h3>How It Works</h3>
-        <p>Your GoalLight connects to the internet and tracks your favourite NHL team's games in real time. When your team scores, the buzzer sounds and the motor spins. Between games it can rest in deep sleep and wake up automatically before puck drop.</p>
+        <p>Your GoalLight connects to the internet and tracks live NHL action in real time. In <strong>Team</strong> mode it follows your favourite team — when they score, the buzzer sounds and the motor spins (and a different, sadder tone plays when the opponent scores). In <strong>Player</strong> mode it tracks the players you choose and tallies their points. Between games it can rest in deep sleep and wake up automatically before puck drop.</p>
 
         <h3>Display Reference</h3>
         <table>
@@ -529,10 +532,33 @@
           <tr><td>Er</td><td>Firmware update failed</td></tr>
           <tr><td>OK</td><td>New WiFi credentials saved, rebooting</td></tr>
           <tr><td>HS</td><td>Hotspot / factory reset mode active</td></tr>
+          <tr><td>FAILED</td><td>WiFi password was wrong — returning to your hotspot so you can retry</td></tr>
+          <tr><td>&nbsp;7&nbsp; / 42</td><td><em>(Player mode)</em> Points earned today, blank-padded (max 99)</td></tr>
+          <tr><td>name scrolls</td><td><em>(Player mode)</em> One of your players just scored</td></tr>
+          <tr><td>IP scrolls</td><td>Quick button tap — shows the device's IP address</td></tr>
         </table>
 
-        <h3>Selecting Your Team</h3>
+        <h3>Mode: Team or Player</h3>
+        <p>At the top of the Control tab you can switch between two modes:</p>
+        <ul>
+          <li><strong>Team</strong> — tracks one NHL team's games and score (the default).</li>
+          <li><strong>Player</strong> — tracks the scoring of specific players you pick (great for fantasy). The light celebrates whenever one of them records points and keeps a running daily total.</li>
+        </ul>
+
+        <h3>Selecting Your Team <em>(Team mode)</em></h3>
         <p>Choose your NHL team from the dropdown and tap <strong>Update Team</strong>. The GoalLight will immediately start tracking that team's games and score.</p>
+
+        <h3>Player Mode</h3>
+        <p>Switch the mode to <strong>Player</strong>, then:</p>
+        <ol style="font-size:0.9em; color:#555; padding-left:20px; margin:6px 0;">
+          <li>Search for and add up to <strong>12 players</strong> (skaters or goalies).</li>
+          <li>Set how many points each event is worth — <strong>Goal</strong>, <strong>Assist</strong>, <strong>Goalie Shutout</strong>, and <strong>Goalie Win</strong>.</li>
+          <li>Tap <strong>Save Players &amp; Scoring</strong>.</li>
+        </ol>
+        <p>Whenever one of your players records a goal or assist, the light flashes, sounds the horn, scrolls the player's <strong>name</strong>, and then shows the new running total. Goalie win/shutout points are added when that game finishes.</p>
+        <div class="tip">
+          The tally uses both digits (<strong>max 99</strong> per day) and <strong>resets at midnight</strong>. It also resets to 0 whenever you change your player list. Changing only the point values re-totals the current day without resetting it. <strong>Power saving is turned off in Player mode</strong> (the light stays awake to show your tally).
+        </div>
 
         <h3>Power Saving Mode</h3>
         <p><strong>On (default):</strong> The device enters deep sleep while your team has no active game, then wakes up automatically about 90 seconds before puck drop.</p>
@@ -552,10 +578,16 @@
         <p>If you select <strong>Alerts Mode</strong> as your team, this feature is available even with Power Saving on, and the device never enters deep sleep.</p>
 
         <h3>The Button (on the device)</h3>
+        <p>What happens depends on how long you hold it:</p>
         <ul>
-          <li><strong>Short press:</strong> Sends a sync request to refresh the current score immediately.</li>
-          <li><strong>Hold 5 seconds:</strong> Factory reset. The display counts down <strong>5 → 4 → 3 → 2 → 1</strong>, then shows <strong>HS</strong> and begins the reset sequence below.</li>
+          <li><strong>Quick tap (under 3 seconds):</strong> Scrolls the light's <strong>IP address</strong>. Type that address into a browser on the same WiFi to open this control page (see below).</li>
+          <li><strong>Hold 3 to under 5 seconds:</strong> Shows the device <strong>secret</strong> and refreshes the current score.</li>
+          <li><strong>Hold 5 seconds or more:</strong> Factory reset. The display counts down <strong>5 → 4 → 3 → 2 → 1</strong>, then shows <strong>HS</strong> and begins the reset sequence below.</li>
         </ul>
+        <p style="font-size:0.85em; color:#888;">The countdown digit shows the seconds left until reset — let go while it reads 5/4/3 for the IP, or 2/1 for the secret.</p>
+
+        <h3>Opening the Control Page</h3>
+        <p>Normally this page opens from your personalised QR link (Device ID and secret already filled in). You can also reach it from any browser on the <strong>same WiFi</strong> as the light: quick-tap the button to read its <strong>IP address</strong>, then type that address into your browser — it will redirect here with everything pre-filled.</p>
 
         <h3>Factory Reset — Auto WiFi Search</h3>
         <p>When a factory reset is triggered, the GoalLight does not immediately fall back to the emergency network. Instead it tries to find a working connection on its own:</p>
@@ -572,7 +604,9 @@
 
         <h3>Troubleshooting</h3>
         <ul>
-          <li><strong>Score not updating</strong> — Short-press the button to request a refresh from the server.</li>
+          <li><strong>Score not updating</strong> — Hold the button 3–5 seconds (until the secret shows) to force a refresh from the server, or wait for the next automatic sync.</li>
+          <li><strong>Entered the wrong WiFi password</strong> — The light shows <strong>FAILED</strong> and returns to your hotspot automatically. Open <strong>Edit WiFi</strong> and send the correct password again — no reset needed.</li>
+          <li><strong>Can't find the light's address</strong> — Quick-tap the button (under 3 seconds) to scroll its IP, then enter that address in a browser on the same WiFi to open this page.</li>
           <li><strong>Missed a goal while sleeping</strong> — The GoalLight syncs the current score on its next connection. It only flashes for goals it was online to receive.</li>
           <li><strong>Device asleep and won't wake</strong> — Unplug USB <em>and</em> remove batteries, wait 30 seconds, then power back on.</li>
           <li><strong>Device not connecting to WiFi</strong> — Hold the button 5 seconds to factory reset. The device will scan and try the three strongest nearby networks with password <strong>12345678</strong>. If none work, it falls back to the <strong>"Goal"</strong> emergency network where you can re-enter credentials via this page.</li>
