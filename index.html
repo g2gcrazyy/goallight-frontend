@@ -134,6 +134,14 @@
       }
       .dd-menu li { padding: 12px; font-size: 16px; cursor: pointer; }
       .dd-menu li:hover { background: #f0f4ff; }
+      /* Mode segmented toggle (Team / Player) */
+      .mode-seg { flex: 1; margin-bottom: 0; background: #6c757d; }
+      .mode-seg:hover { background: #5a6268; }
+      .mode-seg.active { background: #28a745; }
+      .mode-seg.active:hover { background: #218838; }
+      #player_selected li { background: #fff; }
+      #player-mode-controls .wgrid label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.9em; color: #555; }
+      #player-mode-controls .wgrid input { width: 64px; flex: 0 0 auto; padding: 8px; text-align: center; }
       .toggle-switch {
         position: relative;
         display: inline-block;
@@ -307,6 +315,16 @@
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
       <div class="field">
+        <label>Mode</label>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="mode-team-btn" class="mode-seg active" onclick="setMode('team')">Team</button>
+          <button type="button" id="mode-player-btn" class="mode-seg" onclick="setMode('player')">Player</button>
+        </div>
+        <p style="margin: 4px 0 0; font-size: 0.8em; color: #888;">Team = track an NHL team's games. Player = track points for your chosen players (fantasy).</p>
+      </div>
+
+      <div id="team-mode-controls">
+      <div class="field">
         <label>Team Name</label>
         <select
           id="team_name"
@@ -371,6 +389,42 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
+      </div><!-- /team-mode-controls -->
+
+      <div id="player-mode-controls" style="display:none">
+        <div class="field" style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+          <div>
+            <label style="display:block; margin-bottom:3px;">Today's Tally</label>
+            <p style="margin:0; font-size:0.8em; color:#888;">Resets at midnight &amp; when you change players. Max 99.</p>
+          </div>
+          <input type="text" id="player_tally" readonly value="0" style="width:72px; text-align:center; font-size:22px; font-weight:bold; background:#f5f5f5; color:#333;" />
+        </div>
+
+        <div class="field">
+          <label>Add Players (<span id="player_count">0</span>/12)</label>
+          <input type="text" id="player_search_box" placeholder="Search NHL players…" autocomplete="off" oninput="debouncedPlayerSearch()" />
+          <ul id="player_search_results" class="dd-menu" style="position:static; display:none; box-shadow:none; margin-top:4px; max-height:220px;"></ul>
+        </div>
+
+        <div class="field">
+          <label>Tracked Players</label>
+          <ul id="player_selected" style="list-style:none; padding:0; margin:0;"></ul>
+          <p id="player_empty_hint" style="margin:0; font-size:0.85em; color:#888;">No players yet — search above to add up to 12.</p>
+        </div>
+
+        <div class="field">
+          <label>Scoring (points per event)</label>
+          <div class="wgrid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px 16px;">
+            <label>Goal <input type="number" id="w_goal" min="0" max="99" value="1" /></label>
+            <label>Assist <input type="number" id="w_assist" min="0" max="99" value="1" /></label>
+            <label>Goalie Shutout <input type="number" id="w_shutout" min="0" max="99" value="1" /></label>
+            <label>Goalie Win <input type="number" id="w_win" min="0" max="99" value="1" /></label>
+          </div>
+        </div>
+
+        <button onclick="savePlayerConfig()">Save Players &amp; Scoring</button>
+        <p style="margin:4px 0 0; font-size:0.8em; color:#888;">Goalie win/shutout points are added when the game ends.</p>
+      </div><!-- /player-mode-controls -->
 
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
@@ -593,11 +647,11 @@
 
         const cid = 'web_info_' + Math.random().toString(16).substr(2, 5);
         const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
-        let gotInfo = false, gotFirmware = false;
+        let gotInfo = false, gotFirmware = false, gotPlayer = false;
         let deviceVersion = null, latestVersion = null;
 
         const tryDisconnect = () => {
-          if (gotInfo && gotFirmware) {
+          if (gotInfo && gotFirmware && gotPlayer) {
             clearTimeout(timer);
             checkForUpdate(deviceVersion, latestVersion);
             setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
@@ -627,6 +681,9 @@
               if (fw.url) document.getElementById('ota_url').value = fw.url;
               if (fw.version) latestVersion = fw.version;
               gotFirmware = true;
+            } else if (res.type === 'player_state') {
+              applyPlayerState(res.data, true);
+              gotPlayer = true;
             }
           } catch (e) {}
           tryDisconnect();
@@ -646,6 +703,7 @@
             };
             send('info', '{}');
             send('firmware', '');
+            send('player_get', '');
           },
           onFailure: () => { clearTimeout(timer); showBlockedWarning(); },
         });
@@ -965,6 +1023,127 @@
           },
           onFailure: (e) => { showStatus('Connection Failed: ' + e.errorMessage, true); showBlockedWarning(); },
         });
+      }
+
+      // ===== Player mode =====
+      let selectedPlayers = [];      // [{id,name,pos,team}]
+      let playerSearchTimer = null;
+
+      function currentWeights() {
+        const n = (id, d) => { let v = parseInt(document.getElementById(id).value, 10); return (isNaN(v) || v < 0) ? d : Math.min(99, v); };
+        return { goal: n('w_goal', 1), assist: n('w_assist', 1), shutout: n('w_shutout', 1), win: n('w_win', 1) };
+      }
+
+      function setMode(mode, push = true) {
+        const player = mode === 'player';
+        document.getElementById('mode-team-btn').classList.toggle('active', !player);
+        document.getElementById('mode-player-btn').classList.toggle('active', player);
+        document.getElementById('team-mode-controls').style.display = player ? 'none' : 'block';
+        document.getElementById('player-mode-controls').style.display = player ? 'block' : 'none';
+        if (push) {
+          if (player) savePlayerConfig();
+          else sendPlayerCmd('player_config', JSON.stringify({ mode: 'team' }), null, '✅ Switched to Team mode');
+        }
+      }
+
+      // Signed bridge request/response for a player command.
+      function sendPlayerCmd(cmd, payloadStr, onResult, successMsg) {
+        const publicID = document.getElementById('publicID').value;
+        if (!publicID) { showStatus('Enter Device ID first', true); return; }
+        const cid = 'web_pl_' + Math.random().toString(16).substr(2, 5);
+        const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+        const timer = setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 12000);
+        client.onMessageArrived = (msg) => {
+          try { if (onResult) onResult(JSON.parse(msg.payloadString)); } catch (e) {}
+        };
+        client.connect({
+          useSSL: true, userName: CREDENTIALS.mqtt_user, password: CREDENTIALS.mqtt_pass,
+          onSuccess: () => {
+            client.subscribe(`nhl_light/req/out/${publicID}`);
+            const m = new Paho.MQTT.Message(buildRequest(publicID, cmd, payloadStr));
+            m.destinationName = 'nhl_light/req/in'; m.qos = 1; client.send(m);
+            if (successMsg) showStatus(successMsg);
+            setTimeout(() => { clearTimeout(timer); try { client.disconnect(); } catch (e) {} }, 2500);
+          },
+          onFailure: (e) => { clearTimeout(timer); showStatus('Connection Failed: ' + e.errorMessage, true); showBlockedWarning(); },
+        });
+      }
+
+      function debouncedPlayerSearch() {
+        clearTimeout(playerSearchTimer);
+        const q = document.getElementById('player_search_box').value.trim();
+        const ul = document.getElementById('player_search_results');
+        if (q.length < 2) { ul.style.display = 'none'; ul.innerHTML = ''; return; }
+        playerSearchTimer = setTimeout(() => {
+          sendPlayerCmd('player_search', q, (res) => { if (res.type === 'player_search') renderSearchResults(res.data || []); });
+        }, 350);
+      }
+
+      function renderSearchResults(list) {
+        const ul = document.getElementById('player_search_results');
+        ul.innerHTML = '';
+        if (!list.length) { ul.style.display = 'none'; return; }
+        list.forEach((p) => {
+          const li = document.createElement('li');
+          li.textContent = `${p.name} — ${(p.pos || '')} ${(p.team || '')}`.trim();
+          li.onclick = () => addPlayer(p);
+          ul.appendChild(li);
+        });
+        ul.style.display = 'block';
+      }
+
+      function addPlayer(p) {
+        document.getElementById('player_search_results').style.display = 'none';
+        document.getElementById('player_search_box').value = '';
+        if (selectedPlayers.some((x) => x.id === p.id)) return;
+        if (selectedPlayers.length >= 12) { showStatus('Max 12 players', true); return; }
+        selectedPlayers.push({ id: p.id, name: p.name, pos: p.pos, team: p.team });
+        renderSelected();
+      }
+
+      function removePlayer(id) {
+        selectedPlayers = selectedPlayers.filter((x) => x.id !== id);
+        renderSelected();
+      }
+
+      function renderSelected() {
+        const ul = document.getElementById('player_selected');
+        ul.innerHTML = '';
+        selectedPlayers.forEach((p) => {
+          const li = document.createElement('li');
+          li.style = 'display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:6px; font-size:0.95em;';
+          const span = document.createElement('span');
+          span.textContent = `${p.name} (${(p.pos || '')}${p.team ? ' ' + p.team : ''})`;
+          const btn = document.createElement('button');
+          btn.textContent = '✕'; btn.className = 'secondary icon'; btn.style = 'padding:4px 10px; font-size:14px;';
+          btn.onclick = () => removePlayer(p.id);
+          li.appendChild(span); li.appendChild(btn); ul.appendChild(li);
+        });
+        document.getElementById('player_count').textContent = selectedPlayers.length;
+        document.getElementById('player_empty_hint').style.display = selectedPlayers.length ? 'none' : 'block';
+      }
+
+      function savePlayerConfig() {
+        const cfg = { mode: 'player', players: selectedPlayers, weights: currentWeights() };
+        sendPlayerCmd('player_config', JSON.stringify(cfg), (res) => {
+          if (res.type === 'player_config' && res.data) applyPlayerState(res.data, false);
+        }, '✅ Players & scoring saved');
+      }
+
+      function applyPlayerState(data, setToggle = true) {
+        if (!data) return;
+        if (data.weights) {
+          if (typeof data.weights.goal === 'number') document.getElementById('w_goal').value = data.weights.goal;
+          if (typeof data.weights.assist === 'number') document.getElementById('w_assist').value = data.weights.assist;
+          if (typeof data.weights.shutout === 'number') document.getElementById('w_shutout').value = data.weights.shutout;
+          if (typeof data.weights.win === 'number') document.getElementById('w_win').value = data.weights.win;
+        }
+        if (Array.isArray(data.players)) {
+          selectedPlayers = data.players.map((p) => ({ id: p.id, name: p.name, pos: p.pos, team: p.team }));
+          renderSelected();
+        }
+        if (typeof data.tally === 'number') document.getElementById('player_tally').value = data.tally;
+        if (setToggle && data.mode) setMode(data.mode, false);
       }
     </script>
   </body>
