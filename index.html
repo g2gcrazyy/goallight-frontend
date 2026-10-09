@@ -426,6 +426,17 @@
         <p style="margin:4px 0 0; font-size:0.8em; color:#888;">Goalie win/shutout points are added when the game ends.</p>
       </div><!-- /player-mode-controls -->
 
+      <div class="field" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+        <div>
+          <label style="display: block; margin-bottom: 3px;">Disable Sound</label>
+          <p style="margin: 0; font-size: 0.8em; color: #888;">Silences the buzzer. The light and display still work.</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="mute_sound" onchange="sendMute()" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
       <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
 
       <div id="alerts-section" style="display: none;">
@@ -707,6 +718,7 @@
               if (info.team) document.getElementById('team_name').value = info.team;
               if (typeof info.delay === 'number') document.getElementById('goal_delay').value = info.delay;
               if (typeof info.powerSaving === 'boolean') document.getElementById('power_saving').checked = info.powerSaving;
+              if (typeof info.mute === 'boolean') document.getElementById('mute_sound').checked = info.mute;
               if (info.version) { deviceVersion = info.version; var _fw=document.getElementById("current_fw"); if(_fw) _fw.value = "v"+info.version; }
               updateAlertsVisibility();
               gotInfo = true;
@@ -1001,6 +1013,22 @@
         updateAlertsVisibility();
       }
 
+      function sendMute() {
+        const publicID = document.getElementById('publicID').value;
+        const muted = document.getElementById('mute_sound').checked;
+        if (!publicID) {
+          showStatus('Missing Device ID', true);
+          document.getElementById('mute_sound').checked = !muted; // revert
+          return;
+        }
+        publishMQTT(
+          `mute/${publicID}`,
+          muted ? '1' : '0',
+          true,
+          `✅ Sound ${muted ? 'disabled (muted)' : 'enabled'}`
+        );
+      }
+
       function sendScrollText() {
         const publicID = document.getElementById('publicID').value;
         const text = document.getElementById('scroll_text').value.trim();
@@ -1030,7 +1058,7 @@
       function cmdFromSubTopic(subTopic) {
         if (subTopic.startsWith('config/wifi_update')) return 'wifi_update';
         const head = subTopic.split('/')[0];
-        return { scroll: 'scroll', ota: 'ota', config: 'team', delay: 'delay', powersave: 'powersave', wifi_scan: 'wifi_scan' }[head] || head;
+        return { scroll: 'scroll', ota: 'ota', config: 'team', delay: 'delay', powersave: 'powersave', mute: 'mute', wifi_scan: 'wifi_scan' }[head] || head;
       }
 
       // Commands now go to the bridge (nhl_light/req/in) as a signed request. The
