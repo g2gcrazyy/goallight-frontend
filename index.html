@@ -428,11 +428,22 @@
 
       <div class="field" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
         <div>
-          <label style="display: block; margin-bottom: 3px;">Disable Sound</label>
-          <p style="margin: 0; font-size: 0.8em; color: #888;">Silences the buzzer. The light and display still work.</p>
+          <label style="display: block; margin-bottom: 3px;">Disable Home Goal Sound</label>
+          <p style="margin: 0; font-size: 0.8em; color: #888;">Silences your team / player goal horn. Light + display still work.</p>
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="mute_sound" onchange="sendMute()" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="field" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+        <div>
+          <label style="display: block; margin-bottom: 3px;">Disable Away Goal Sound</label>
+          <p style="margin: 0; font-size: 0.8em; color: #888;">Silences the opponent-scored tone.</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="mute_away" onchange="sendMuteAway()" />
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -719,6 +730,7 @@
               if (typeof info.delay === 'number') document.getElementById('goal_delay').value = info.delay;
               if (typeof info.powerSaving === 'boolean') document.getElementById('power_saving').checked = info.powerSaving;
               if (typeof info.mute === 'boolean') document.getElementById('mute_sound').checked = info.mute;
+              if (typeof info.mute_away === 'boolean') document.getElementById('mute_away').checked = info.mute_away;
               if (info.version) { deviceVersion = info.version; var _fw=document.getElementById("current_fw"); if(_fw) _fw.value = "v"+info.version; }
               updateAlertsVisibility();
               gotInfo = true;
@@ -1025,7 +1037,23 @@
           `mute/${publicID}`,
           muted ? '1' : '0',
           true,
-          `✅ Sound ${muted ? 'disabled (muted)' : 'enabled'}`
+          `✅ Home goal sound ${muted ? 'disabled' : 'enabled'}`
+        );
+      }
+
+      function sendMuteAway() {
+        const publicID = document.getElementById('publicID').value;
+        const muted = document.getElementById('mute_away').checked;
+        if (!publicID) {
+          showStatus('Missing Device ID', true);
+          document.getElementById('mute_away').checked = !muted; // revert
+          return;
+        }
+        publishMQTT(
+          `mute_away/${publicID}`,
+          muted ? '1' : '0',
+          true,
+          `✅ Away goal sound ${muted ? 'disabled' : 'enabled'}`
         );
       }
 
@@ -1058,7 +1086,7 @@
       function cmdFromSubTopic(subTopic) {
         if (subTopic.startsWith('config/wifi_update')) return 'wifi_update';
         const head = subTopic.split('/')[0];
-        return { scroll: 'scroll', ota: 'ota', config: 'team', delay: 'delay', powersave: 'powersave', mute: 'mute', wifi_scan: 'wifi_scan' }[head] || head;
+        return { scroll: 'scroll', ota: 'ota', config: 'team', delay: 'delay', powersave: 'powersave', mute: 'mute', mute_away: 'mute_away', wifi_scan: 'wifi_scan' }[head] || head;
       }
 
       // Commands now go to the bridge (nhl_light/req/in) as a signed request. The
