@@ -555,6 +555,40 @@
           <span style="font-size:0.8em; color:#888;">Fire every field you've filled in above — all at once. For example a sound <em>and</em> a flash together.</span>
         </div>
         <button onclick="sendCombo()">▶ Run Combination</button>
+
+        <hr style="border:0; border-top:1px solid #eee; margin:24px 0" />
+
+        <h2 style="margin-top:8px">🗣️ Siri Voice Control</h2>
+        <p style="font-size:0.9em; color:#555; margin:4px 0 14px;">Control this light by voice with Apple Shortcuts — ask <em>which team is set</em> or <em>who's playing</em>, switch between Team and Player mode, set a team, or scroll a message. Enter your <strong>Device ID</strong> and <strong>Secret</strong> on the Hockey tab, then tap Generate. Your token is unique to this light, derived from your secret, and only ever controls this one light — never anything else.</p>
+        <button onclick="genSiri()">Generate my Siri setup</button>
+
+        <div id="siri-out" style="display:none; margin-top:18px;">
+          <div class="field">
+            <label>Your API token</label>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <code id="siri-token" style="flex:1; word-break:break-all; background:#f4f4f4; padding:8px 10px; border-radius:6px; font-size:0.78em;"></code>
+              <button type="button" onclick="copySiri('siri-token')" style="white-space:nowrap;">Copy</button>
+            </div>
+            <span style="font-size:0.8em; color:#888;">Paste this as the value of an <code>X-Intent-Token</code> header in every shortcut.</span>
+          </div>
+
+          <p style="font-size:0.85em; color:#555; margin:16px 0 4px;"><strong>Your shortcut URLs</strong> — method GET, with the token header above:</p>
+          <div id="siri-urls"></div>
+
+          <details style="margin-top:16px;">
+            <summary style="cursor:pointer; font-weight:600; font-size:0.9em;">How to build a shortcut (step-by-step)</summary>
+            <ol style="font-size:0.86em; color:#444; line-height:1.55; padding-left:20px; margin-top:8px;">
+              <li>Open <strong>Shortcuts</strong> → <strong>+</strong> → <strong>Add Action</strong>.</li>
+              <li>Add <strong>Get Contents of URL</strong>, and paste one URL from above into it.</li>
+              <li><strong>Show More</strong> → leave Method as <strong>GET</strong> → <strong>Headers</strong> → add key <code>X-Intent-Token</code> with your token as the value.</li>
+              <li>Add <strong>Speak Text</strong>, and set its input to the <strong>Contents of URL</strong> variable.</li>
+              <li>Name the shortcut the phrase you want to say — e.g. &ldquo;Which team is set&rdquo; — then Done. Say &ldquo;Hey Siri, <em>&lt;that phrase&gt;</em>&rdquo;.</li>
+              <li><strong>Set team</strong> and <strong>Message</strong> take input: before step 2, add <strong>Ask for Input</strong> (Text), then <strong>URL Encode</strong> it, and append the encoded result to the end of the URL (right after <code>to=</code> or <code>text=</code>).</li>
+            </ol>
+          </details>
+
+          <div id="siri-downloads" style="margin-top:14px; font-size:0.84em; color:#888;">💡 One-tap downloadable shortcuts are on the way — for now, build them with the steps above.</div>
+        </div>
       </div><!-- /tab-light -->
 
       <div id="tab-manual" class="manual" style="display:none">
@@ -1215,6 +1249,50 @@
       function sendShow()      { sendControl('show',   '✅ Characters sent'); }
       function sendScrollMsg() { sendControl('scroll', '✅ Message sent'); }
       function sendCombo()     { sendControl('all',    '✅ Combination sent'); }
+
+      // ===== Siri voice control (Apple Shortcuts -> intent API) =====
+      // The per-device token = HMAC(secret, "intent:"+publicID) -- the SAME value the
+      // server derives from the device's privateSerial, so each light has its own token.
+      function genSiri() {
+        const pid = (document.getElementById('publicID').value || '').trim();
+        const secret = getSecret();
+        if (!pid || !secret) {
+          showStatus('Enter your Device ID and Secret on the Hockey tab first.', true);
+          return;
+        }
+        const token = CryptoJS.HmacSHA256('intent:' + pid, secret).toString(CryptoJS.enc.Hex);
+        document.getElementById('siri-token').textContent = token;
+
+        const base = 'https://goallight.duckdns.org/intent';
+        const q = '?device=' + encodeURIComponent(pid);
+        const rows = [
+          ['Which team is set',      base + '/team' + q],
+          ["Who's playing",          base + '/playing' + q],
+          ['Switch to team mode',    base + '/mode' + q + '&to=team'],
+          ['Switch to player mode',  base + '/mode' + q + '&to=player'],
+          ['Set team (append name)', base + '/team' + q + '&to='],
+          ['Message (append text)',  base + '/message' + q + '&text='],
+        ];
+        document.getElementById('siri-urls').innerHTML = rows.map((r, i) =>
+          '<div style="display:flex; gap:8px; align-items:center; margin:6px 0;">' +
+            '<span style="flex:0 0 40%; font-size:0.8em; color:#333;">' + r[0] + '</span>' +
+            '<code id="su' + i + '" style="flex:1; word-break:break-all; background:#f4f4f4; padding:6px 8px; border-radius:6px; font-size:0.72em;">' + r[1] + '</code>' +
+            '<button type="button" onclick="copySiri(\'su' + i + '\')" style="white-space:nowrap; padding:6px 10px;">Copy</button>' +
+          '</div>').join('');
+
+        document.getElementById('siri-out').style.display = 'block';
+      }
+      function copySiri(id) {
+        const txt = (document.getElementById(id).textContent || '').trim();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(
+            () => showStatus('✅ Copied!'),
+            () => showStatus('Copy failed — select and copy manually.', true)
+          );
+        } else {
+          showStatus('Copy not supported — select and copy manually.', true);
+        }
+      }
 
       // Device secret (from the ?secret= QR param); used only as an HMAC key, never sent.
       function getSecret() {
