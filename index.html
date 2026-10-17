@@ -293,11 +293,12 @@
   <body>
     <div class="card">
       <div class="tab-bar">
-        <button class="tab-btn active" id="tab-btn-control" onclick="switchTab('control')">Control</button>
+        <button class="tab-btn active" id="tab-btn-hockey" onclick="switchTab('hockey')">Hockey</button>
+        <button class="tab-btn" id="tab-btn-light" onclick="switchTab('light')">Control</button>
         <button class="tab-btn" id="tab-btn-manual" onclick="switchTab('manual')">User Manual</button>
       </div>
 
-      <div id="tab-control">
+      <div id="tab-hockey">
       <span id="mode-badge" class="badge">DEV MODE</span>
       <h2>🚨 Goal Light Control</h2>
       <p style="color: #666; font-size: 0.9em">Update team, configure WiFi, or Update.</p>
@@ -505,8 +506,56 @@
         </div>
         <button class="secondary" onclick="triggerOTA()">Push Firmware Update</button>
       </details>
-      <div id="status"></div>
-      </div><!-- /tab-control -->
+      </div><!-- /tab-hockey -->
+
+      <div id="tab-light" style="display:none">
+        <h2>🎛️ Light Control</h2>
+        <p style="font-size:0.9em; color:#555; margin:4px 0 18px;">Drive the light directly — great for testing or for triggering effects from Home Assistant. These work on top of whatever mode the light is in. (Home Assistant can send the exact same effects over MQTT — see the <strong>User Manual</strong>.)</p>
+
+        <div class="field">
+          <label>Play a Sound</label>
+          <div style="display:flex; gap:8px;">
+            <input type="number" id="ctl_freq" min="50" max="8000" value="784" placeholder="Hz" style="flex:1;" />
+            <input type="number" id="ctl_dur" min="10" max="10000" value="500" placeholder="ms" style="flex:1;" />
+          </div>
+          <span style="font-size:0.8em; color:#888;">Frequency in Hz (left) and duration in ms (right).</span>
+        </div>
+        <button onclick="sendTone()">Play Sound</button>
+
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+        <div class="field">
+          <label>Flash the Light</label>
+          <input type="number" id="ctl_flash" min="0" max="60" step="0.5" value="3" placeholder="seconds" />
+          <span style="font-size:0.8em; color:#888;">The motor/light runs for this many seconds (max 60).</span>
+        </div>
+        <button onclick="sendFlash()">Flash Light</button>
+
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+        <div class="field">
+          <label>Show 2 Characters</label>
+          <input type="text" id="ctl_chars" maxlength="2" value="GO" placeholder="e.g. GO" style="text-transform:uppercase;" />
+          <span style="font-size:0.8em; color:#888;">Up to 2 characters, held on the display until the next automatic update.</span>
+        </div>
+        <button onclick="sendShow()">Show</button>
+
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+        <div class="field">
+          <label>Scroll a Message</label>
+          <input type="text" id="ctl_scroll" maxlength="60" placeholder="Text to scroll across the display..." />
+        </div>
+        <button onclick="sendScrollMsg()">Scroll</button>
+
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+        <div class="field">
+          <label>Combine Effects</label>
+          <span style="font-size:0.8em; color:#888;">Fire every field you've filled in above — all at once. For example a sound <em>and</em> a flash together.</span>
+        </div>
+        <button onclick="sendCombo()">▶ Run Combination</button>
+      </div><!-- /tab-light -->
 
       <div id="tab-manual" class="manual" style="display:none">
 
@@ -525,7 +574,7 @@
           <li>On your phone, turn on your <strong>Personal Hotspot</strong> (with 2.4 GHz compatibility enabled, as above) and set the password to <strong>12345678</strong>.</li>
           <li>Hold the button on the GoalLight for <strong>5 seconds</strong> until the display counts down and shows <strong>HS</strong>. This triggers a WiFi scan and the device will try to connect to the strongest nearby network using the password 12345678 — which is your hotspot.</li>
           <li>Wait until your phone's hotspot name scrolls across the GoalLight display. This confirms it has connected successfully.</li>
-          <li>On this page, go to the <strong>Control</strong> tab and open <strong>Edit WiFi</strong>.</li>
+          <li>On this page, go to the <strong>Hockey</strong> tab and open <strong>Edit WiFi</strong>.</li>
           <li>Tap <strong>Scan</strong>, select your home WiFi network from the dropdown, enter your home WiFi password, and tap <strong>Update WiFi Credentials</strong>.</li>
           <li>The GoalLight will save the credentials and reboot. When your home WiFi name scrolls across the display, setup is complete.</li>
         </ol>
@@ -561,7 +610,7 @@
         </table>
 
         <h3>Mode: Team or Player</h3>
-        <p>At the top of the Control tab you can switch between two modes:</p>
+        <p>At the top of the Hockey tab you can switch between two modes:</p>
         <ul>
           <li><strong>Team</strong> — tracks one NHL team's games and score (the default).</li>
           <li><strong>Player</strong> — tracks the scoring of specific players you pick (great for fantasy). The light celebrates whenever one of them records points and keeps a running daily total.</li>
@@ -598,6 +647,44 @@
         <h3>Display Messages</h3>
         <p>When Power Saving is <strong>off</strong>, a <strong>Send to Display</strong> field is always visible. Any text you send will scroll across the 7-segment display, then the device returns to showing the countdown or dot. The goal buzzer fires before the message appears.</p>
         <p>If you select <strong>Alerts Mode</strong> as your team, this feature is available even with Power Saving on, and the device never enters deep sleep.</p>
+
+        <h3>Control Tab (Manual Effects)</h3>
+        <p>The <strong>Control</strong> tab lets you drive the light by hand, independent of the hockey scores — handy for testing or for a bit of fun. It offers:</p>
+        <ul>
+          <li><strong>Play a Sound</strong> — any frequency (Hz) for any duration (ms).</li>
+          <li><strong>Flash the Light</strong> — spin the motor/light for a set number of seconds.</li>
+          <li><strong>Show 2 Characters</strong> — hold up to two characters on the display.</li>
+          <li><strong>Scroll a Message</strong> — scroll any text across the display.</li>
+          <li><strong>Run Combination</strong> — fire every field you've filled in at once (for example a flash <em>and</em> a sound together).</li>
+        </ul>
+
+        <h3>Home Assistant</h3>
+        <p>The light can be controlled from <strong>Home Assistant</strong> (or any MQTT client) using the exact same effects as the Control tab. Home Assistant connects <em>out</em> to the light's MQTT broker over TLS — nothing on your home network is exposed to the internet.</p>
+        <div class="tip">
+          <strong>Connection:</strong> host <code>goallight.duckdns.org</code>, port <strong>8883</strong> (TLS), username <strong>goallight-ha</strong>. The password is set on the server — ask the owner; it is not shown here. This login can <em>only</em> trigger these effects: it cannot read anything, change WiFi, or update firmware.
+        </div>
+        <p>Publish a message to one of these topics (replace <code>&lt;ID&gt;</code> with your Device ID, shown on the <strong>Hockey</strong> tab under <strong>Advanced</strong>):</p>
+        <table>
+          <tr><th>Effect</th><th>Topic</th><th>Payload example</th></tr>
+          <tr><td>Sound</td><td><code>nhl_light/tone/&lt;ID&gt;</code></td><td><code>784:500</code> <span style="font-family:inherit;font-weight:normal;">(Hz:ms; chain with commas, e.g. <code>523:300,659:300,784:400</code>)</span></td></tr>
+          <tr><td>Flash</td><td><code>nhl_light/light/&lt;ID&gt;</code></td><td><code>3</code> <span style="font-family:inherit;font-weight:normal;">(seconds, max 60)</span></td></tr>
+          <tr><td>2 chars</td><td><code>nhl_light/show/&lt;ID&gt;</code></td><td><code>GO</code></td></tr>
+          <tr><td>Scroll</td><td><code>nhl_light/scroll/&lt;ID&gt;</code></td><td><code>LETS GO</code></td></tr>
+        </table>
+        <p><strong>Combinations:</strong> publish to more than one topic in the same automation — a flash and a sound sent together play at the same time.</p>
+        <p>A simple way to wire it up (works no matter what MQTT broker your Home Assistant already uses) is a <code>shell_command</code> with <code>mosquitto_pub</code>. In <code>configuration.yaml</code>, replacing <code>YOUR_DEVICE_ID</code> and <code>YOUR_HA_PASSWORD</code>:</p>
+        <pre style="background:#f6f8fa; border:1px solid #e1e4e8; border-radius:6px; padding:10px; font-size:0.78em; overflow-x:auto; color:#24292e;">shell_command:
+  gl_sound:  'mosquitto_pub -h goallight.duckdns.org -p 8883 --capath /etc/ssl/certs -u goallight-ha -P YOUR_HA_PASSWORD -t "nhl_light/tone/YOUR_DEVICE_ID"   -m "{{ freq }}:{{ dur }}"'
+  gl_flash:  'mosquitto_pub -h goallight.duckdns.org -p 8883 --capath /etc/ssl/certs -u goallight-ha -P YOUR_HA_PASSWORD -t "nhl_light/light/YOUR_DEVICE_ID"  -m "{{ secs }}"'
+  gl_show:   'mosquitto_pub -h goallight.duckdns.org -p 8883 --capath /etc/ssl/certs -u goallight-ha -P YOUR_HA_PASSWORD -t "nhl_light/show/YOUR_DEVICE_ID"   -m "{{ text }}"'
+  gl_scroll: 'mosquitto_pub -h goallight.duckdns.org -p 8883 --capath /etc/ssl/certs -u goallight-ha -P YOUR_HA_PASSWORD -t "nhl_light/scroll/YOUR_DEVICE_ID" -m "{{ text }}"'</pre>
+        <p>Then an automation can fire a combo — here a 3-second flash and a horn together:</p>
+        <pre style="background:#f6f8fa; border:1px solid #e1e4e8; border-radius:6px; padding:10px; font-size:0.78em; overflow-x:auto; color:#24292e;">action:
+  - service: shell_command.gl_flash
+    data: { secs: 3 }
+  - service: shell_command.gl_sound
+    data: { freq: 784, dur: 2000 }</pre>
+        <p style="font-size:0.85em; color:#888;">If your Home Assistant's own MQTT integration points at this broker, you can use the native <code>mqtt.publish</code> service with the same topics and payloads instead.</p>
 
         <h3>The Button (on the device)</h3>
         <p>What happens depends on how long you hold it:</p>
@@ -636,6 +723,8 @@
         </ul>
 
       </div><!-- /tab-manual -->
+
+      <div id="status"></div>
     </div>
 
     <script>
@@ -686,10 +775,10 @@
       }
 
       function switchTab(name) {
-        document.getElementById('tab-control').style.display = name === 'control' ? 'block' : 'none';
-        document.getElementById('tab-manual').style.display  = name === 'manual'  ? 'block' : 'none';
-        document.getElementById('tab-btn-control').classList.toggle('active', name === 'control');
-        document.getElementById('tab-btn-manual').classList.toggle('active',  name === 'manual');
+        ['hockey', 'light', 'manual'].forEach((t) => {
+          document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+          document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
+        });
       }
 
       function updateAlertsVisibility() {
@@ -1073,6 +1162,60 @@
         publishMQTT(`scroll/${publicID}`, text, true, `✅ Sent "${text}" to display!`);
       }
 
+      // ===== Control tab (manual effects; same path Home Assistant uses) =====
+      function ctlVal(id) { return document.getElementById(id).value.trim(); }
+
+      // Build [{cmd, payload}] for a given action, or 'all' = every field that's filled.
+      function controlActions(which) {
+        const out = [];
+        const freq = parseInt(ctlVal('ctl_freq'), 10);
+        const dur = parseInt(ctlVal('ctl_dur'), 10);
+        const flash = parseFloat(ctlVal('ctl_flash'));
+        const chars = ctlVal('ctl_chars');
+        const scroll = ctlVal('ctl_scroll');
+        if ((which === 'tone' || which === 'all') && freq > 0 && dur > 0)
+          out.push({ cmd: 'tone', payload: `${freq}:${dur}` });
+        if ((which === 'light' || which === 'all') && flash > 0)
+          out.push({ cmd: 'light', payload: String(flash) });
+        if ((which === 'show' || which === 'all') && chars)
+          out.push({ cmd: 'show', payload: chars.slice(0, 2) });
+        if ((which === 'scroll' || which === 'all') && scroll)
+          out.push({ cmd: 'scroll', payload: scroll });
+        return out;
+      }
+
+      // Send one or more signed commands over a single connection, so a combo fires together.
+      function sendControl(which, successMsg) {
+        const publicID = document.getElementById('publicID').value;
+        if (!publicID) { showStatus('Missing Device ID', true); return; }
+        const actions = controlActions(which);
+        if (!actions.length) { showStatus('Nothing to send — fill in a field first.', true); return; }
+        const cid = 'web_ctl_' + Math.random().toString(16).substr(2, 5);
+        const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
+        client.connect({
+          useSSL: true,
+          userName: CREDENTIALS.mqtt_user,
+          password: CREDENTIALS.mqtt_pass,
+          onSuccess: () => {
+            actions.forEach((a) => {
+              const m = new Paho.MQTT.Message(buildRequest(publicID, a.cmd, a.payload));
+              m.destinationName = 'nhl_light/req/in';
+              m.qos = 1;
+              client.send(m);
+            });
+            showStatus(successMsg || '✅ Sent!');
+            setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 1000);
+          },
+          onFailure: (e) => { showStatus('Connection Failed: ' + e.errorMessage, true); showBlockedWarning(); },
+        });
+      }
+
+      function sendTone()      { sendControl('tone',   '✅ Sound sent'); }
+      function sendFlash()     { sendControl('light',  '✅ Flash sent'); }
+      function sendShow()      { sendControl('show',   '✅ Characters sent'); }
+      function sendScrollMsg() { sendControl('scroll', '✅ Message sent'); }
+      function sendCombo()     { sendControl('all',    '✅ Combination sent'); }
+
       // Device secret (from the ?secret= QR param); used only as an HMAC key, never sent.
       function getSecret() {
         return document.getElementById('privateSerial').value || CREDENTIALS.privateSerial;
@@ -1086,7 +1229,7 @@
       function cmdFromSubTopic(subTopic) {
         if (subTopic.startsWith('config/wifi_update')) return 'wifi_update';
         const head = subTopic.split('/')[0];
-        return { scroll: 'scroll', ota: 'ota', config: 'team', delay: 'delay', powersave: 'powersave', mute: 'mute', mute_away: 'mute_away', wifi_scan: 'wifi_scan' }[head] || head;
+        return { scroll: 'scroll', ota: 'ota', config: 'team', delay: 'delay', powersave: 'powersave', mute: 'mute', mute_away: 'mute_away', wifi_scan: 'wifi_scan', tone: 'tone', light: 'light', show: 'show' }[head] || head;
       }
 
       // Commands now go to the bridge (nhl_light/req/in) as a signed request. The
