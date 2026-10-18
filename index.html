@@ -288,20 +288,28 @@
         margin: 10px 0;
       }
       .manual .tip strong { color: #333; }
+      .manual details.man-sec { border: 1px solid #eee; border-radius: 8px; margin: 8px 0; padding: 0 14px; }
+      .manual details.man-sec > summary { cursor: pointer; font-weight: 600; color: #007bff; padding: 11px 0; list-style: none; font-size: 0.95em; }
+      .manual details.man-sec > summary::-webkit-details-marker { display: none; }
+      .manual details.man-sec > summary::before { content: "\25B8  "; color: #888; }
+      .manual details.man-sec[open] > summary::before { content: "\25BE  "; }
+      .manual details.man-sec[open] > summary { border-bottom: 1px solid #f0f0f0; margin-bottom: 8px; }
+      .manual details.man-sec > *:last-child { margin-bottom: 12px; }
     </style>
   </head>
   <body>
     <div class="card">
       <div class="tab-bar">
         <button class="tab-btn active" id="tab-btn-hockey" onclick="switchTab('hockey')">Hockey</button>
-        <button class="tab-btn" id="tab-btn-light" onclick="switchTab('light')">Control</button>
+        <button class="tab-btn" id="tab-btn-display" onclick="switchTab('display')">Display</button>
+        <button class="tab-btn" id="tab-btn-settings" onclick="switchTab('settings')">Settings</button>
         <button class="tab-btn" id="tab-btn-manual" onclick="switchTab('manual')">User Manual</button>
       </div>
 
       <div id="tab-hockey">
       <span id="mode-badge" class="badge">DEV MODE</span>
       <h2>🚨 Goal Light Control</h2>
-      <p style="color: #666; font-size: 0.9em">Update team, configure WiFi, or Update.</p>
+      <p style="color: #666; font-size: 0.9em">Pick your team or players and tune game-day behaviour. WiFi, firmware, and voice control live under <strong>Settings</strong>.</p>
 
       <div id="update-banner" style="display:none; background:#fff3cd; border:1px solid #ffc107; border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:0.875em; color:#555;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
@@ -380,16 +388,6 @@
         <p style="margin: 4px 0 0; font-size: 0.8em; color: #888;">Delays the score update and goal flash to match your stream.</p>
       </div>
 
-      <div class="field" style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
-        <div>
-          <label style="display: block; margin-bottom: 3px;">Power Saving</label>
-          <p style="margin: 0; font-size: 0.8em; color: #888;">Off = device never sleeps, shows a dot while idle.</p>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="power_saving" checked onchange="sendPowerSave()" />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
       </div><!-- /team-mode-controls -->
 
       <div id="player-mode-controls" style="display:none">
@@ -449,152 +447,142 @@
         </label>
       </div>
 
-      <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
+      </div><!-- /tab-hockey -->
 
-      <div id="alerts-section" style="display: none;">
+      <div id="tab-display" style="display:none">
+        <h2>💬 Display Message</h2>
+        <p style="font-size:0.9em; color:#555; margin:4px 0 14px;">Scroll a short message across the light's display. It appears while the light is <strong>awake</strong> — when Power Saving is off, when your team is set to <em>Alerts Mode</em>, or during the 90-second window just after power-on.</p>
         <div class="field">
-          <label>Display Message</label>
+          <label>Message</label>
           <input type="text" id="scroll_text" placeholder="Text to scroll on display..." maxlength="30" />
         </div>
         <button onclick="sendScrollText()">Send to Display</button>
+      </div><!-- /tab-display -->
 
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
-      </div>
-      <details style="margin-top: 20px; cursor: pointer">
-        <summary style="color: #007bff; font-weight: bold; margin-bottom: 10px">Edit WiFi</summary>
+      <div id="tab-settings" style="display:none">
+        <h2>⚙️ Settings</h2>
 
-        <div class="field">
-          <label>WiFi SSID</label>
-          <div style="display: flex; gap: 8px; align-items: stretch;">
-            <div class="dd" style="flex: 1;">
-              <input type="hidden" id="wifi_ssid" value="" />
-              <button type="button" id="wifi_dd_trigger" class="dd-trigger" onclick="toggleWifiDropdown()" aria-haspopup="listbox" aria-expanded="false" disabled>
-                <span id="wifi_dd_label" class="dd-label">-- Tap Scan to find networks --</span>
-                <span class="dd-caret" aria-hidden="true">▾</span>
-              </button>
-              <ul id="wifi_dd_menu" class="dd-menu" role="listbox" hidden></ul>
-            </div>
-            <button class="secondary icon" onclick="requestWifiScan()">Scan</button>
+        <div class="field" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+          <div>
+            <label style="display: block; margin-bottom: 3px;">Power Saving</label>
+            <p style="margin: 0; font-size: 0.8em; color: #888;">Off = device never sleeps, shows a dot while idle.</p>
           </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="power_saving" checked onchange="sendPowerSave()" />
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-
-        <div class="field">
-          <label>WiFi Password</label>
-          <input type="password" id="wifi_pass" placeholder="Home WiFi Password" />
-        </div>
-
-        <button class="secondary" onclick="sendEncryptedWiFi()">Update WiFi Credentials</button>
-      </details>
-      <details style="margin-top: 20px; cursor: pointer">
-        <summary style="color: #007bff; font-weight: bold; margin-bottom: 10px">Advanced</summary>
-        <div class="field">
-          <label>Current Firmware</label>
-          <input type="text" id="current_fw" placeholder="checking..." readonly style="background:#f5f5f5;color:#555;" />
-        </div>
-        <div class="field">
-          <label>Device ID</label>
-          <input type="text" id="publicID" placeholder="e.g. 8209fb4d..." />
-        </div>
-
-        <div class="field" id="secret_field">
-          <label>Private Serial</label>
-          <input type="password" id="privateSerial" placeholder="Enter Private Serial" />
-        </div>
-        <div class="field">
-          <label>Firmware URL (.bin)</label>
-          <input type="text" id="ota_url" placeholder="https://..." />
-        </div>
-        <button class="secondary" onclick="triggerOTA()">Push Firmware Update</button>
-      </details>
-      </div><!-- /tab-hockey -->
-
-      <div id="tab-light" style="display:none">
-        <h2>🎛️ Light Control</h2>
-        <p style="font-size:0.9em; color:#555; margin:4px 0 18px;">Drive the light directly — great for testing or for triggering effects from Home Assistant. These work on top of whatever mode the light is in. (Home Assistant can send the exact same effects over MQTT — see the <strong>User Manual</strong>.)</p>
-
-        <div class="field">
-          <label>Play a Sound</label>
-          <div style="display:flex; gap:8px;">
-            <input type="number" id="ctl_freq" min="50" max="8000" value="784" placeholder="Hz" style="flex:1;" />
-            <input type="number" id="ctl_dur" min="10" max="10000" value="500" placeholder="ms" style="flex:1;" />
-          </div>
-          <span style="font-size:0.8em; color:#888;">Frequency in Hz (left) and duration in ms (right).</span>
-        </div>
-        <button onclick="sendTone()">Play Sound</button>
 
         <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
 
-        <div class="field">
-          <label>Flash the Light</label>
-          <input type="number" id="ctl_flash" min="0" max="60" step="0.5" value="3" placeholder="seconds" />
-          <span style="font-size:0.8em; color:#888;">The motor/light runs for this many seconds (max 60).</span>
-        </div>
-        <button onclick="sendFlash()">Flash Light</button>
-
-        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
-
-        <div class="field">
-          <label>Show 2 Characters</label>
-          <input type="text" id="ctl_chars" maxlength="2" value="GO" placeholder="e.g. GO" style="text-transform:uppercase;" />
-          <span style="font-size:0.8em; color:#888;">Up to 2 characters, held on the display until the next automatic update.</span>
-        </div>
-        <button onclick="sendShow()">Show</button>
-
-        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
-
-        <div class="field">
-          <label>Scroll a Message</label>
-          <input type="text" id="ctl_scroll" maxlength="60" placeholder="Text to scroll across the display..." />
-        </div>
-        <button onclick="sendScrollMsg()">Scroll</button>
-
-        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
-
-        <div class="field">
-          <label>Combine Effects</label>
-          <span style="font-size:0.8em; color:#888;">Fire every field you've filled in above — all at once. For example a sound <em>and</em> a flash together.</span>
-        </div>
-        <button onclick="sendCombo()">▶ Run Combination</button>
-
-        <hr style="border:0; border-top:1px solid #eee; margin:24px 0" />
-
-        <h2 style="margin-top:8px">🗣️ Siri Voice Control</h2>
-        <p style="font-size:0.9em; color:#555; margin:4px 0 14px;">Control this light by voice with Apple Shortcuts — ask <em>which team is set</em> or <em>who's playing</em>, switch between Team and Player mode, set a team, or scroll a message. Enter your <strong>Device ID</strong> and <strong>Secret</strong> on the Hockey tab, then tap Generate. Your token is unique to this light, derived from your secret, and only ever controls this one light — never anything else.</p>
-        <button onclick="genSiri()">Generate my Siri setup</button>
-
-        <div id="siri-out" style="display:none; margin-top:18px;">
-          <div class="field">
-            <label>Your API token</label>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <code id="siri-token" style="flex:1; word-break:break-all; background:#f4f4f4; padding:8px 10px; border-radius:6px; font-size:0.78em;"></code>
-              <button type="button" onclick="copySiri('siri-token')" style="white-space:nowrap;">Copy</button>
-            </div>
-            <span style="font-size:0.8em; color:#888;">Paste this as the value of an <code>X-Intent-Token</code> header in every shortcut.</span>
-          </div>
-
-          <p style="font-size:0.85em; color:#555; margin:16px 0 4px;"><strong>Your shortcut URLs</strong> — method GET, with the token header above:</p>
+        <h3 style="font-size:1.05em; color:#333; margin:0 0 6px;">🗣️ Siri Voice Control</h3>
+        <p style="font-size:0.9em; color:#555; margin:4px 0 14px;">Control this light by voice with Apple Shortcuts — ask <em>which team is set</em> or <em>who's playing</em>, switch Team/Player mode, set a team, or scroll a message. Your six shortcuts come prefilled for this light and signed — just add them and talk to Siri. (Your <strong>Device ID</strong> and <strong>Secret</strong> must be filled in under <em>Advanced</em> below.)</p>
+        <button onclick="showSiri()">Show my Siri shortcuts</button>
+        <div id="siri-out" style="display:none; margin-top:14px;">
+          <p style="font-size:0.85em; color:#555; margin:0 0 8px;">On your iPhone, open each and tap <strong>Add Shortcut</strong>, then say &ldquo;Hey Siri, <em>&lt;name&gt;</em>&rdquo;:</p>
           <div id="siri-urls"></div>
-
-          <details style="margin-top:16px;">
-            <summary style="cursor:pointer; font-weight:600; font-size:0.9em;">How to build a shortcut (step-by-step)</summary>
-            <ol style="font-size:0.86em; color:#444; line-height:1.55; padding-left:20px; margin-top:8px;">
-              <li>Open <strong>Shortcuts</strong> → <strong>+</strong> → <strong>Add Action</strong>.</li>
-              <li>Add <strong>Get Contents of URL</strong>, and paste one URL from above into it.</li>
-              <li><strong>Show More</strong> → leave Method as <strong>GET</strong> → <strong>Headers</strong> → add key <code>X-Intent-Token</code> with your token as the value.</li>
-              <li>Add <strong>Speak Text</strong>, and set its input to the <strong>Contents of URL</strong> variable.</li>
-              <li>Name the shortcut the phrase you want to say — e.g. &ldquo;Which team is set&rdquo; — then Done. Say &ldquo;Hey Siri, <em>&lt;that phrase&gt;</em>&rdquo;.</li>
-              <li><strong>Set team</strong> and <strong>Message</strong> take input: before step 2, add <strong>Ask for Input</strong> (Text), then <strong>URL Encode</strong> it, and append the encoded result to the end of the URL (right after <code>to=</code> or <code>text=</code>).</li>
-            </ol>
-          </details>
-
-          <div id="siri-downloads" style="margin-top:14px; font-size:0.84em; color:#888;">💡 One-tap downloadable shortcuts are on the way — for now, build them with the steps above.</div>
+          <div class="tip" style="background:#fff8e1; border-left:3px solid #ffc107; padding:10px 12px; border-radius:0 6px 6px 0; font-size:0.84em; color:#555; margin:12px 0 0;">The two that take input (<strong>Set the goal light team</strong> and <strong>Goal light display</strong>) ask you out loud and listen for your spoken reply when used by voice.</div>
         </div>
-      </div><!-- /tab-light -->
+
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+        <details style="cursor: pointer">
+          <summary style="color: #007bff; font-weight: bold; margin-bottom: 10px">Light Control (manual effects)</summary>
+          <p style="font-size:0.85em; color:#888; margin:4px 0 14px;">Drive the light directly — handy for testing or for triggering effects from Home Assistant. These work on top of whatever mode the light is in.</p>
+          <div class="field">
+            <label>Play a Sound</label>
+            <div style="display:flex; gap:8px;">
+              <input type="number" id="ctl_freq" min="50" max="8000" value="784" placeholder="Hz" style="flex:1;" />
+              <input type="number" id="ctl_dur" min="10" max="10000" value="500" placeholder="ms" style="flex:1;" />
+            </div>
+            <span style="font-size:0.8em; color:#888;">Frequency in Hz (left) and duration in ms (right).</span>
+          </div>
+          <button onclick="sendTone()">Play Sound</button>
+
+          <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+          <div class="field">
+            <label>Flash the Light</label>
+            <input type="number" id="ctl_flash" min="0" max="60" step="0.5" value="3" placeholder="seconds" />
+            <span style="font-size:0.8em; color:#888;">The motor/light runs for this many seconds (max 60).</span>
+          </div>
+          <button onclick="sendFlash()">Flash Light</button>
+
+          <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+          <div class="field">
+            <label>Show 2 Characters</label>
+            <input type="text" id="ctl_chars" maxlength="2" value="GO" placeholder="e.g. GO" style="text-transform:uppercase;" />
+            <span style="font-size:0.8em; color:#888;">Up to 2 characters, held on the display until the next automatic update.</span>
+          </div>
+          <button onclick="sendShow()">Show</button>
+
+          <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+          <div class="field">
+            <label>Scroll a Message</label>
+            <input type="text" id="ctl_scroll" maxlength="60" placeholder="Text to scroll across the display..." />
+          </div>
+          <button onclick="sendScrollMsg()">Scroll</button>
+
+          <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
+          <div class="field">
+            <label>Combine Effects</label>
+            <span style="font-size:0.8em; color:#888;">Fire every field you've filled in above — all at once. For example a sound <em>and</em> a flash together.</span>
+          </div>
+          <button onclick="sendCombo()">▶ Run Combination</button>
+        </details>
+
+        <details style="margin-top: 20px; cursor: pointer">
+          <summary style="color: #007bff; font-weight: bold; margin-bottom: 10px">Edit WiFi</summary>
+          <div class="field">
+            <label>WiFi SSID</label>
+            <div style="display: flex; gap: 8px; align-items: stretch;">
+              <div class="dd" style="flex: 1;">
+                <input type="hidden" id="wifi_ssid" value="" />
+                <button type="button" id="wifi_dd_trigger" class="dd-trigger" onclick="toggleWifiDropdown()" aria-haspopup="listbox" aria-expanded="false" disabled>
+                  <span id="wifi_dd_label" class="dd-label">-- Tap Scan to find networks --</span>
+                  <span class="dd-caret" aria-hidden="true">▾</span>
+                </button>
+                <ul id="wifi_dd_menu" class="dd-menu" role="listbox" hidden></ul>
+              </div>
+              <button class="secondary icon" onclick="requestWifiScan()">Scan</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>WiFi Password</label>
+            <input type="password" id="wifi_pass" placeholder="Home WiFi Password" />
+          </div>
+          <button class="secondary" onclick="sendEncryptedWiFi()">Update WiFi Credentials</button>
+        </details>
+
+        <details style="margin-top: 20px; cursor: pointer">
+          <summary style="color: #007bff; font-weight: bold; margin-bottom: 10px">Advanced</summary>
+          <div class="field">
+            <label>Current Firmware</label>
+            <input type="text" id="current_fw" placeholder="checking..." readonly style="background:#f5f5f5;color:#555;" />
+          </div>
+          <div class="field">
+            <label>Device ID</label>
+            <input type="text" id="publicID" placeholder="e.g. 8209fb4d..." />
+          </div>
+          <div class="field" id="secret_field">
+            <label>Private Serial</label>
+            <input type="password" id="privateSerial" placeholder="Enter Private Serial" />
+          </div>
+          <div class="field">
+            <label>Firmware URL (.bin)</label>
+            <input type="text" id="ota_url" placeholder="https://..." />
+          </div>
+          <button class="secondary" onclick="triggerOTA()">Push Firmware Update</button>
+        </details>
+      </div><!-- /tab-settings -->
 
       <div id="tab-manual" class="manual" style="display:none">
 
-        <h3>First-Time Setup</h3>
-        <p>This page should have been opened from a personalised link — your Device ID is already filled in automatically. Follow these steps to get connected:</p>
+        <details class="man-sec"><summary>First-Time Setup</summary>
+<p>This page should have been opened from a personalised link — your Device ID is already filled in automatically. Follow these steps to get connected:</p>
         <div class="tip">
           <strong>⚠️ The GoalLight only supports 2.4 GHz WiFi.</strong> Newer phones create their hotspot on 5 GHz by default, so you must turn on the 2.4 GHz / compatibility option or the light can't connect:
           <ul style="margin:6px 0 0; padding-left:18px;">
@@ -608,7 +596,7 @@
           <li>On your phone, turn on your <strong>Personal Hotspot</strong> (with 2.4 GHz compatibility enabled, as above) and set the password to <strong>12345678</strong>.</li>
           <li>Hold the button on the GoalLight for <strong>5 seconds</strong> until the display counts down and shows <strong>HS</strong>. This triggers a WiFi scan and the device will try to connect to the strongest nearby network using the password 12345678 — which is your hotspot.</li>
           <li>Wait until your phone's hotspot name scrolls across the GoalLight display. This confirms it has connected successfully.</li>
-          <li>On this page, go to the <strong>Hockey</strong> tab and open <strong>Edit WiFi</strong>.</li>
+          <li>On this page, go to the <strong>Settings</strong> tab and open <strong>Edit WiFi</strong>.</li>
           <li>Tap <strong>Scan</strong>, select your home WiFi network from the dropdown, enter your home WiFi password, and tap <strong>Update WiFi Credentials</strong>.</li>
           <li>The GoalLight will save the credentials and reboot. When your home WiFi name scrolls across the display, setup is complete.</li>
         </ol>
@@ -618,13 +606,12 @@
         <div class="tip">
           <strong>Entered the wrong WiFi password?</strong> No problem — the light will show <strong>FAILED</strong>, reconnect to your hotspot on its own, and wait. Just open <strong>Edit WiFi</strong> again and send the correct password. No factory reset needed.
         </div>
-
-
-        <h3>How It Works</h3>
-        <p>Your GoalLight connects to the internet and tracks live NHL action in real time. In <strong>Team</strong> mode it follows your favourite team — when they score, the buzzer sounds and the motor spins (and a different, sadder tone plays when the opponent scores). In <strong>Player</strong> mode it tracks the players you choose and tallies their points. Between games it can rest in deep sleep and wake up automatically before puck drop.</p>
-
-        <h3>Display Reference</h3>
-        <table>
+        </details>
+        <details class="man-sec"><summary>How It Works</summary>
+<p>Your GoalLight connects to the internet and tracks live NHL action in real time. In <strong>Team</strong> mode it follows your favourite team — when they score, the buzzer sounds and the motor spins (and a different, sadder tone plays when the opponent scores). In <strong>Player</strong> mode it tracks the players you choose and tallies their points. Between games it can rest in deep sleep and wake up automatically before puck drop.</p>
+        </details>
+        <details class="man-sec"><summary>Display Reference</summary>
+<table>
           <tr><th>Shows</th><th>Meaning</th></tr>
           <tr><td>3 2</td><td>Live score — your team (left) vs opponent (right)</td></tr>
           <tr><td>FT</td><td>Puck drop in under a minute</td></tr>
@@ -642,19 +629,19 @@
           <tr><td>name scrolls</td><td><em>(Player mode)</em> One of your players just scored</td></tr>
           <tr><td>IP scrolls</td><td>Quick button tap — shows the device's IP address</td></tr>
         </table>
-
-        <h3>Mode: Team or Player</h3>
-        <p>At the top of the Hockey tab you can switch between two modes:</p>
+        </details>
+        <details class="man-sec"><summary>Mode: Team or Player</summary>
+<p>At the top of the Hockey tab you can switch between two modes:</p>
         <ul>
           <li><strong>Team</strong> — tracks one NHL team's games and score (the default).</li>
           <li><strong>Player</strong> — tracks the scoring of specific players you pick (great for fantasy). The light celebrates whenever one of them records points and keeps a running daily total.</li>
         </ul>
-
-        <h3>Selecting Your Team <em>(Team mode)</em></h3>
-        <p>Choose your NHL team from the dropdown and tap <strong>Update Team</strong>. The GoalLight will immediately start tracking that team's games and score.</p>
-
-        <h3>Player Mode</h3>
-        <p>Switch the mode to <strong>Player</strong>, then:</p>
+        </details>
+        <details class="man-sec"><summary>Selecting Your Team (Team mode)</summary>
+<p>Choose your NHL team from the dropdown and tap <strong>Update Team</strong>. The GoalLight will immediately start tracking that team's games and score.</p>
+        </details>
+        <details class="man-sec"><summary>Player Mode</summary>
+<p>Switch the mode to <strong>Player</strong>, then:</p>
         <ol style="font-size:0.9em; color:#555; padding-left:20px; margin:6px 0;">
           <li>Search for and add up to <strong>12 players</strong> (skaters or goalies).</li>
           <li>Set how many points each event is worth — <strong>Goal</strong>, <strong>Assist</strong>, <strong>Goalie Shutout</strong>, and <strong>Goalie Win</strong>.</li>
@@ -664,26 +651,29 @@
         <div class="tip">
           The tally uses both digits (<strong>max 99</strong> per day) and <strong>resets at midnight</strong>. It also resets to 0 whenever you change your player list. Changing only the point values re-totals the current day without resetting it. <strong>Power saving is turned off in Player mode</strong> (the light stays awake to show your tally).
         </div>
-
-        <h3>Power Saving Mode</h3>
-        <p><strong>On (default):</strong> The device enters deep sleep while your team has no active game, then wakes up automatically about 90 seconds before puck drop.</p>
+        </details>
+        <details class="man-sec"><summary>Power Saving Mode</summary>
+<p><strong>On (default):</strong> The device enters deep sleep while your team has no active game, then wakes up automatically about 90 seconds before puck drop.</p>
         <p><strong>Off:</strong> The device stays on at all times. While waiting for a game it counts down — showing days (<strong>3d</strong>) or hours (<strong>7h</strong>) — or a dot (·) if no game is scheduled within the next 9 days. Display messages can be sent at any time.</p>
         <div class="tip">
           <strong>Waking from deep sleep early:</strong> Deep sleep can only be ended by removing all power. Unplug the USB cable <em>and</em> remove the batteries, wait <strong>30 seconds</strong>, then power back on. The device will be in its 90-second setup window before resuming normal operation.
         </div>
-
-        <h3>90-Second Setup Window</h3>
-        <p>Every time the GoalLight powers on, it stays awake for <strong>90 seconds</strong> regardless of the game schedule. This gives you a window to change settings, send a display message, or confirm it is online before it potentially goes back to sleep.</p>
-
-        <h3>Goal Delay</h3>
-        <p>Streaming services typically add a few seconds of delay between when a goal happens and when it appears on your screen. Set the <strong>Goal Delay</strong> (in seconds) to match your stream lag — the buzzer and motor will fire at the exact moment the goal appears on your TV.</p>
-
-        <h3>Display Messages</h3>
-        <p>When Power Saving is <strong>off</strong>, a <strong>Send to Display</strong> field is always visible. Any text you send will scroll across the 7-segment display, then the device returns to showing the countdown or dot. The goal buzzer fires before the message appears.</p>
+        </details>
+        <details class="man-sec"><summary>90-Second Setup Window</summary>
+<p>Every time the GoalLight powers on, it stays awake for <strong>90 seconds</strong> regardless of the game schedule. This gives you a window to change settings, send a display message, or confirm it is online before it potentially goes back to sleep.</p>
+        </details>
+        <details class="man-sec"><summary>Goal Delay</summary>
+<p>Streaming services typically add a few seconds of delay between when a goal happens and when it appears on your screen. Set the <strong>Goal Delay</strong> (in seconds) to match your stream lag — the buzzer and motor will fire at the exact moment the goal appears on your TV.</p>
+        </details>
+        <details class="man-sec"><summary>Display Messages</summary>
+<p>The <strong>Display</strong> tab has a <strong>Send to Display</strong> field. Any text you send scrolls across the 7-segment display while the light is awake (Power Saving off, Alerts Mode, or the 90-second window just after power-on), then it returns to showing the countdown or dot.</p>
         <p>If you select <strong>Alerts Mode</strong> as your team, this feature is available even with Power Saving on, and the device never enters deep sleep.</p>
-
-        <h3>Control Tab (Manual Effects)</h3>
-        <p>The <strong>Control</strong> tab lets you drive the light by hand, independent of the hockey scores — handy for testing or for a bit of fun. It offers:</p>
+        </details>
+        <details class="man-sec"><summary>Siri Voice Control</summary>
+<p>Control the light by voice with Apple Shortcuts. On the <strong>Settings</strong> tab, tap <strong>Show my Siri shortcuts</strong> and add the six shortcuts to your iPhone (they come prefilled for your light and signed, so there is nothing to paste). Then just talk to Siri:</p><ul><li>&ldquo;Hey Siri, <strong>Which team is set</strong>&rdquo; &mdash; speaks the current team.</li><li>&ldquo;Hey Siri, <strong>Who is playing</strong>&rdquo; &mdash; next game or live score.</li><li>&ldquo;Hey Siri, <strong>Goal light team mode</strong>&rdquo; / &ldquo;<strong>Goal light player mode</strong>&rdquo; &mdash; switch modes.</li><li>&ldquo;Hey Siri, <strong>Set the goal light team</strong>&rdquo; &mdash; Siri asks which team and listens.</li><li>&ldquo;Hey Siri, <strong>Goal light display</strong>&rdquo; &mdash; Siri asks for a message and scrolls it.</li></ul><p style="font-size:0.85em; color:#888;">You can rename any shortcut in the Shortcuts app &mdash; the name is the phrase Siri listens for. Avoid words like &ldquo;message&rdquo; or &ldquo;text&rdquo;, which Siri routes to the Messages app.</p>
+        </details>
+        <details class="man-sec"><summary>Light Control (Settings)</summary>
+<p>The <strong>Light Control</strong> panel (under the <strong>Settings</strong> tab) lets you drive the light by hand, independent of the hockey scores — handy for testing or for a bit of fun. It offers:</p>
         <ul>
           <li><strong>Play a Sound</strong> — any frequency (Hz) for any duration (ms).</li>
           <li><strong>Flash the Light</strong> — spin the motor/light for a set number of seconds.</li>
@@ -691,13 +681,13 @@
           <li><strong>Scroll a Message</strong> — scroll any text across the display.</li>
           <li><strong>Run Combination</strong> — fire every field you've filled in at once (for example a flash <em>and</em> a sound together).</li>
         </ul>
-
-        <h3>Home Assistant</h3>
-        <p>The light can be controlled from <strong>Home Assistant</strong> (or any MQTT client) using the exact same effects as the Control tab. Home Assistant connects <em>out</em> to the light's MQTT broker over TLS — nothing on your home network is exposed to the internet.</p>
+        </details>
+        <details class="man-sec"><summary>Home Assistant</summary>
+<p>The light can be controlled from <strong>Home Assistant</strong> (or any MQTT client) using the exact same effects as the Control tab. Home Assistant connects <em>out</em> to the light's MQTT broker over TLS — nothing on your home network is exposed to the internet.</p>
         <div class="tip">
           <strong>Connection:</strong> host <code>goallight.duckdns.org</code>, port <strong>8883</strong> (TLS), username <strong>goallight-ha</strong>. The password is set on the server — ask the owner; it is not shown here. This login can <em>only</em> trigger these effects: it cannot read anything, change WiFi, or update firmware.
         </div>
-        <p>Publish a message to one of these topics (replace <code>&lt;ID&gt;</code> with your Device ID, shown on the <strong>Hockey</strong> tab under <strong>Advanced</strong>):</p>
+        <p>Publish a message to one of these topics (replace <code>&lt;ID&gt;</code> with your Device ID, shown under <strong>Settings &rarr; Advanced</strong>):</p>
         <table>
           <tr><th>Effect</th><th>Topic</th><th>Payload example</th></tr>
           <tr><td>Sound</td><td><code>nhl_light/tone/&lt;ID&gt;</code></td><td><code>784:500</code> <span style="font-family:inherit;font-weight:normal;">(Hz:ms; chain with commas, e.g. <code>523:300,659:300,784:400</code>)</span></td></tr>
@@ -719,21 +709,21 @@
   - service: shell_command.gl_sound
     data: { freq: 784, dur: 2000 }</pre>
         <p style="font-size:0.85em; color:#888;">If your Home Assistant's own MQTT integration points at this broker, you can use the native <code>mqtt.publish</code> service with the same topics and payloads instead.</p>
-
-        <h3>The Button (on the device)</h3>
-        <p>What happens depends on how long you hold it:</p>
+        </details>
+        <details class="man-sec"><summary>The Button (on the device)</summary>
+<p>What happens depends on how long you hold it:</p>
         <ul>
           <li><strong>Quick tap (under 3 seconds):</strong> Scrolls the light's <strong>IP address</strong>. Type that address into a browser on the same WiFi to open this control page (see below).</li>
           <li><strong>Hold 3 to under 5 seconds:</strong> Shows the device <strong>secret</strong> and refreshes the current score.</li>
           <li><strong>Hold 5 seconds or more:</strong> Factory reset. The display counts down <strong>5 → 4 → 3 → 2 → 1</strong>, then shows <strong>HS</strong> and begins the reset sequence below.</li>
         </ul>
         <p style="font-size:0.85em; color:#888;">The countdown digit shows the seconds left until reset — let go while it reads 5/4/3 for the IP, or 2/1 for the secret.</p>
-
-        <h3>Opening the Control Page</h3>
-        <p>Normally this page opens from your personalised QR link (Device ID and secret already filled in). You can also reach it from any browser on the <strong>same WiFi</strong> as the light: quick-tap the button to read its <strong>IP address</strong>, then type that address into your browser — it will redirect here with everything pre-filled.</p>
-
-        <h3>Factory Reset — Auto WiFi Search</h3>
-        <p>When a factory reset is triggered, the GoalLight does not immediately fall back to the emergency network. Instead it tries to find a working connection on its own:</p>
+        </details>
+        <details class="man-sec"><summary>Opening the Control Page</summary>
+<p>Normally this page opens from your personalised QR link (Device ID and secret already filled in). You can also reach it from any browser on the <strong>same WiFi</strong> as the light: quick-tap the button to read its <strong>IP address</strong>, then type that address into your browser — it will redirect here with everything pre-filled.</p>
+        </details>
+        <details class="man-sec"><summary>Factory Reset — Auto WiFi Search</summary>
+<p>When a factory reset is triggered, the GoalLight does not immediately fall back to the emergency network. Instead it tries to find a working connection on its own:</p>
         <ol style="font-size:0.9em; color:#555; padding-left:20px; margin: 6px 0;">
           <li>Saved WiFi credentials are erased.</li>
           <li>A WiFi scan runs automatically (display shows <strong>HS</strong>).</li>
@@ -744,10 +734,10 @@
         <div class="tip">
           <strong>Tip:</strong> If your home WiFi password is <strong>12345678</strong>, factory reset will find and reconnect to it automatically without any further setup.
         </div>
-
-        <h3>Troubleshooting</h3>
-        <ul>
-          <li><strong>Score not updating</strong> — Hold the button 3–5 seconds (until the secret shows) to force a refresh from the server, or wait for the next automatic sync.</li>
+        </details>
+        <details class="man-sec"><summary>Troubleshooting</summary>
+<ul>
+          <li><strong>Score not updating</strong> — Hold the button 3&ndash;5 seconds (until the secret shows) to force a refresh from the server, or wait for the next automatic sync.</li>
           <li><strong>Entered the wrong WiFi password</strong> — The light shows <strong>FAILED</strong> and returns to your hotspot automatically. Open <strong>Edit WiFi</strong> and send the correct password again — no reset needed.</li>
           <li><strong>Can't find the light's address</strong> — Quick-tap the button (under 3 seconds) to scroll its IP, then enter that address in a browser on the same WiFi to open this page.</li>
           <li><strong>Missed a goal while sleeping</strong> — The GoalLight syncs the current score on its next connection. It only flashes for goals it was online to receive.</li>
@@ -755,7 +745,7 @@
           <li><strong>Device not connecting to WiFi</strong> — Hold the button 5 seconds to factory reset. The device will scan and try the three strongest nearby networks with password <strong>12345678</strong>. If none work, it falls back to the <strong>"Goal"</strong> emergency network where you can re-enter credentials via this page.</li>
           <li><strong>Display shows Er</strong> — OTA firmware update failed. Check the firmware URL and try again.</li>
         </ul>
-
+        </details>
       </div><!-- /tab-manual -->
 
       <div id="status"></div>
@@ -799,7 +789,8 @@
       }
 
       function openAdvancedForOTA() {
-        // Open the Advanced details panel and scroll the OTA button into view
+        // Jump to Settings, open the Advanced panel, and scroll the OTA button into view
+        switchTab('settings');
         const details = document.querySelectorAll('details');
         details.forEach(d => { if (d.querySelector('#ota_url')) d.open = true; });
         setTimeout(() => {
@@ -809,17 +800,15 @@
       }
 
       function switchTab(name) {
-        ['hockey', 'light', 'manual'].forEach((t) => {
+        ['hockey', 'display', 'settings', 'manual'].forEach((t) => {
           document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
           document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
         });
       }
 
-      function updateAlertsVisibility() {
-        const isAlerts = document.getElementById('team_name').value === 'ALT';
-        const isPowerSavingOff = !document.getElementById('power_saving').checked;
-        document.getElementById('alerts-section').style.display = (isAlerts || isPowerSavingOff) ? 'block' : 'none';
-      }
+      // Kept for compatibility: the Display-message field now lives on its own
+      // tab and is always available, so there is nothing to show/hide here.
+      function updateAlertsVisibility() {}
 
       function fetchDeviceInfo(publicID) {
         if (!publicID) return;
@@ -1250,48 +1239,34 @@
       function sendScrollMsg() { sendControl('scroll', '✅ Message sent'); }
       function sendCombo()     { sendControl('all',    '✅ Combination sent'); }
 
-      // ===== Siri voice control (Apple Shortcuts -> intent API) =====
-      // The per-device token = HMAC(secret, "intent:"+publicID) -- the SAME value the
-      // server derives from the device's privateSerial, so each light has its own token.
-      function genSiri() {
+      // ===== Siri voice control (prefilled, signed, per-device shortcuts) =====
+      // Each device's six shortcuts are pre-built and signed at provisioning and
+      // hosted under a private slug = HMAC(secret, "siri-shortcuts")[:24]. The slug
+      // is computed in-browser from the secret, so only someone holding the secret
+      // can find the links. The token lives inside the signed files, never here.
+      function showSiri() {
         const pid = (document.getElementById('publicID').value || '').trim();
         const secret = getSecret();
         if (!pid || !secret) {
-          showStatus('Enter your Device ID and Secret on the Hockey tab first.', true);
+          showStatus('Fill in your Device ID and Secret under Settings → Advanced first.', true);
           return;
         }
-        const token = CryptoJS.HmacSHA256('intent:' + pid, secret).toString(CryptoJS.enc.Hex);
-        document.getElementById('siri-token').textContent = token;
-
-        const base = 'https://goallight.duckdns.org/intent';
-        const q = '?device=' + encodeURIComponent(pid);
-        const rows = [
-          ['Which team is set',      base + '/team' + q],
-          ["Who's playing",          base + '/playing' + q],
-          ['Switch to team mode',    base + '/mode' + q + '&to=team'],
-          ['Switch to player mode',  base + '/mode' + q + '&to=player'],
-          ['Set team (append name)', base + '/team' + q + '&to='],
-          ['Message (append text)',  base + '/message' + q + '&text='],
+        const slug = CryptoJS.HmacSHA256('siri-shortcuts', secret).toString(CryptoJS.enc.Hex).slice(0, 24);
+        const base = 'https://goallight.duckdns.org/shortcuts/' + slug + '/';
+        const names = [
+          'Which team is set',
+          'Who is playing',
+          'Goal light team mode',
+          'Goal light player mode',
+          'Set the goal light team',
+          'Goal light display',
         ];
-        document.getElementById('siri-urls').innerHTML = rows.map((r, i) =>
-          '<div style="display:flex; gap:8px; align-items:center; margin:6px 0;">' +
-            '<span style="flex:0 0 40%; font-size:0.8em; color:#333;">' + r[0] + '</span>' +
-            '<code id="su' + i + '" style="flex:1; word-break:break-all; background:#f4f4f4; padding:6px 8px; border-radius:6px; font-size:0.72em;">' + r[1] + '</code>' +
-            '<button type="button" onclick="copySiri(\'su' + i + '\')" style="white-space:nowrap; padding:6px 10px;">Copy</button>' +
-          '</div>').join('');
-
+        document.getElementById('siri-urls').innerHTML = names.map((n) =>
+          '<a href="' + base + encodeURIComponent(n) + '.shortcut" ' +
+             'style="display:block; margin:6px 0; padding:11px 14px; background:#007bff; color:#fff; ' +
+             'border-radius:6px; text-decoration:none; font-weight:600; font-size:0.9em;">＋ Add &ldquo;' + n + '&rdquo;</a>'
+        ).join('');
         document.getElementById('siri-out').style.display = 'block';
-      }
-      function copySiri(id) {
-        const txt = (document.getElementById(id).textContent || '').trim();
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(txt).then(
-            () => showStatus('✅ Copied!'),
-            () => showStatus('Copy failed — select and copy manually.', true)
-          );
-        } else {
-          showStatus('Copy not supported — select and copy manually.', true);
-        }
       }
 
       // Device secret (from the ?secret= QR param); used only as an HMAC key, never sent.
