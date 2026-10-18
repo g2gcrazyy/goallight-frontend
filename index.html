@@ -479,7 +479,7 @@
         <p style="font-size:0.9em; color:#555; margin:4px 0 14px;">Control this light by voice with Apple Shortcuts — ask <em>which team is set</em> or <em>who's playing</em>, switch Team/Player mode, set a team, or scroll a message. Your six shortcuts come prefilled for this light and signed — just add them and talk to Siri. (Your <strong>Device ID</strong> and <strong>Secret</strong> must be filled in under <em>Advanced</em> below.)</p>
         <button onclick="showSiri()">Show my Siri shortcuts</button>
         <div id="siri-out" style="display:none; margin-top:14px;">
-          <p style="font-size:0.85em; color:#555; margin:0 0 8px;">On your iPhone, open each and tap <strong>Add Shortcut</strong>, then say &ldquo;Hey Siri, <em>&lt;name&gt;</em>&rdquo;:</p>
+          <p style="font-size:0.85em; color:#555; margin:0 0 8px;">On your iPhone, tap one below. In Safari it <strong>downloads</strong> — then tap the download (the <strong>⤓</strong> icon by the address bar) to add it in Shortcuts. <em>Tip: if you open these from Messages or Notes, they jump straight into Shortcuts.</em> Then just say &ldquo;Hey Siri, <em>&lt;name&gt;</em>&rdquo;.</p>
           <div id="siri-urls"></div>
           <div class="tip" style="background:#fff8e1; border-left:3px solid #ffc107; padding:10px 12px; border-radius:0 6px 6px 0; font-size:0.84em; color:#555; margin:12px 0 0;">The two that take input (<strong>Set the goal light team</strong> and <strong>Goal light display</strong>) ask you out loud and listen for your spoken reply when used by voice.</div>
         </div>
@@ -1262,11 +1262,11 @@
           'Goal light display',
         ];
         document.getElementById('siri-urls').innerHTML = names.map((n) => {
+          // Direct link to the signed file. Safari downloads it (then tap the
+          // download to add); Messages/Notes hand it straight to Shortcuts.
+          // import-shortcut:// and true one-tap are iCloud-only, so not usable here.
           var fileUrl = base + encodeURIComponent(n) + '.shortcut';
-          // Shortcuts' import URL scheme opens the app and imports from the URL
-          // (what "Add to Shortcuts" web buttons use), instead of downloading.
-          var href = 'shortcuts://import-shortcut?url=' + encodeURIComponent(fileUrl) + '&name=' + encodeURIComponent(n);
-          return '<a href="' + href + '" ' +
+          return '<a href="' + fileUrl + '" ' +
              'style="display:block; margin:6px 0; padding:11px 14px; background:#007bff; color:#fff; ' +
              'border-radius:6px; text-decoration:none; font-weight:600; font-size:0.9em;">＋ Add &ldquo;' + n + '&rdquo;</a>';
         }).join('');
