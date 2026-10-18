@@ -1261,11 +1261,15 @@
           'Set the goal light team',
           'Goal light display',
         ];
-        document.getElementById('siri-urls').innerHTML = names.map((n) =>
-          '<a href="' + base + encodeURIComponent(n) + '.shortcut" ' +
+        document.getElementById('siri-urls').innerHTML = names.map((n) => {
+          var fileUrl = base + encodeURIComponent(n) + '.shortcut';
+          // Shortcuts' import URL scheme opens the app and imports from the URL
+          // (what "Add to Shortcuts" web buttons use), instead of downloading.
+          var href = 'shortcuts://import-shortcut?url=' + encodeURIComponent(fileUrl) + '&name=' + encodeURIComponent(n);
+          return '<a href="' + href + '" ' +
              'style="display:block; margin:6px 0; padding:11px 14px; background:#007bff; color:#fff; ' +
-             'border-radius:6px; text-decoration:none; font-weight:600; font-size:0.9em;">＋ Add &ldquo;' + n + '&rdquo;</a>'
-        ).join('');
+             'border-radius:6px; text-decoration:none; font-weight:600; font-size:0.9em;">＋ Add &ldquo;' + n + '&rdquo;</a>';
+        }).join('');
         document.getElementById('siri-out').style.display = 'block';
       }
 
