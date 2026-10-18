@@ -481,7 +481,7 @@
         <div id="siri-out" style="display:none; margin-top:14px;">
           <p style="font-size:0.85em; color:#555; margin:0 0 8px;">On your iPhone, tap one below. In Safari it <strong>downloads</strong> — then tap the download (the <strong>⤓</strong> icon by the address bar) to add it in Shortcuts. <em>Tip: if you open these from Messages or Notes, they jump straight into Shortcuts.</em> Then just say &ldquo;Hey Siri, <em>&lt;name&gt;</em>&rdquo;.</p>
           <div id="siri-urls"></div>
-          <div class="tip" style="background:#fff8e1; border-left:3px solid #ffc107; padding:10px 12px; border-radius:0 6px 6px 0; font-size:0.84em; color:#555; margin:12px 0 0;">The two that take input (<strong>Set the goal light team</strong> and <strong>Goal light display</strong>) ask you out loud and listen for your spoken reply when used by voice.</div>
+          <div class="tip" style="background:#fff8e1; border-left:3px solid #ffc107; padding:10px 12px; border-radius:0 6px 6px 0; font-size:0.84em; color:#555; margin:12px 0 0;">The two that take input (<strong>Beacon set team</strong> and <strong>Beacon scroll</strong>) ask you out loud and listen for your spoken reply when used by voice. Each name is the exact phrase for Siri — rename any in the Shortcuts app if you prefer different words.</div>
         </div>
 
         <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
@@ -670,7 +670,7 @@
         <p>If you select <strong>Alerts Mode</strong> as your team, this feature is available even with Power Saving on, and the device never enters deep sleep.</p>
         </details>
         <details class="man-sec"><summary>Siri Voice Control</summary>
-<p>Control the light by voice with Apple Shortcuts. On the <strong>Settings</strong> tab, tap <strong>Show my Siri shortcuts</strong> and add the six shortcuts to your iPhone (they come prefilled for your light and signed, so there is nothing to paste). Then just talk to Siri:</p><ul><li>&ldquo;Hey Siri, <strong>Which team is set</strong>&rdquo; &mdash; speaks the current team.</li><li>&ldquo;Hey Siri, <strong>Who is playing</strong>&rdquo; &mdash; next game or live score.</li><li>&ldquo;Hey Siri, <strong>Goal light team mode</strong>&rdquo; / &ldquo;<strong>Goal light player mode</strong>&rdquo; &mdash; switch modes.</li><li>&ldquo;Hey Siri, <strong>Set the goal light team</strong>&rdquo; &mdash; Siri asks which team and listens.</li><li>&ldquo;Hey Siri, <strong>Goal light display</strong>&rdquo; &mdash; Siri asks for a message and scrolls it.</li></ul><p style="font-size:0.85em; color:#888;">You can rename any shortcut in the Shortcuts app &mdash; the name is the phrase Siri listens for. Avoid words like &ldquo;message&rdquo; or &ldquo;text&rdquo;, which Siri routes to the Messages app.</p>
+<p>Control the light by voice with Apple Shortcuts. On the <strong>Settings</strong> tab, tap <strong>Show my Siri shortcuts</strong> and add the six shortcuts to your iPhone (they come prefilled for your light and signed, so there is nothing to paste). Then just talk to Siri:</p><ul><li>&ldquo;Hey Siri, <strong>Beacon team</strong>&rdquo; &mdash; speaks the current team.</li><li>&ldquo;Hey Siri, <strong>Beacon playing</strong>&rdquo; &mdash; next game or live score.</li><li>&ldquo;Hey Siri, <strong>Beacon team mode</strong>&rdquo; / &ldquo;<strong>Beacon player mode</strong>&rdquo; &mdash; switch modes.</li><li>&ldquo;Hey Siri, <strong>Beacon set team</strong>&rdquo; &mdash; Siri asks which team and listens.</li><li>&ldquo;Hey Siri, <strong>Beacon scroll</strong>&rdquo; &mdash; Siri asks what to show and scrolls it.</li></ul><p style="font-size:0.85em; color:#888;">You can rename any shortcut in the Shortcuts app &mdash; the name is the phrase Siri listens for. Avoid words like &ldquo;message&rdquo; or &ldquo;text&rdquo; (Siri routes those to the Messages app), and &ldquo;goal&rdquo; (often misheard).</p>
         </details>
         <details class="man-sec"><summary>Light Control (Settings)</summary>
 <p>The <strong>Light Control</strong> panel (under the <strong>Settings</strong> tab) lets you drive the light by hand, independent of the hockey scores — handy for testing or for a bit of fun. It offers:</p>
@@ -1254,12 +1254,12 @@
         const slug = CryptoJS.HmacSHA256('siri-shortcuts', secret).toString(CryptoJS.enc.Hex).slice(0, 24);
         const base = 'https://goallight.duckdns.org/shortcuts/' + slug + '/';
         const names = [
-          'Which team is set',
-          'Who is playing',
-          'Goal light team mode',
-          'Goal light player mode',
-          'Set the goal light team',
-          'Goal light display',
+          'Beacon team',
+          'Beacon playing',
+          'Beacon team mode',
+          'Beacon player mode',
+          'Beacon set team',
+          'Beacon scroll',
         ];
         document.getElementById('siri-urls').innerHTML = names.map((n) => {
           // Direct link to the signed file. Safari downloads it (then tap the
