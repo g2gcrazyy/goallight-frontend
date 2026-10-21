@@ -475,6 +475,29 @@
 
         <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
 
+        <h3 style="font-size:1.05em; color:#333; margin:0 0 6px;">🕒 Time Zone</h3>
+        <p style="font-size:0.9em; color:#555; margin:4px 0 10px;">Sets when this light's day rolls over (midnight) for the player-mode daily score, and how it counts the days until the next game. <strong>Automatic</strong> follows the time zone of whatever phone you set it up on; pick a zone to lock it manually.</p>
+        <div class="field">
+          <select id="tz_select" onchange="sendTz()">
+            <option value="auto">Automatic — use this phone's time zone</option>
+            <optgroup label="Canada &amp; US">
+              <option value="America/Vancouver">Pacific — Vancouver / Los Angeles</option>
+              <option value="America/Edmonton">Mountain — Edmonton / Denver</option>
+              <option value="America/Regina">Central, no DST — Saskatchewan</option>
+              <option value="America/Winnipeg">Central — Winnipeg / Chicago</option>
+              <option value="America/Toronto">Eastern — Toronto / New York</option>
+              <option value="America/Halifax">Atlantic — Halifax</option>
+              <option value="America/St_Johns">Newfoundland — St. John's</option>
+              <option value="America/Phoenix">Arizona, no DST — Phoenix</option>
+              <option value="America/Anchorage">Alaska — Anchorage</option>
+              <option value="Pacific/Honolulu">Hawaii — Honolulu</option>
+            </optgroup>
+          </select>
+          <p id="tz_hint" style="margin:6px 0 0; font-size:0.8em; color:#888;"></p>
+        </div>
+
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0" />
+
         <h3 style="font-size:1.05em; color:#333; margin:0 0 6px;">🗣️ Siri Voice Control</h3>
         <p style="font-size:0.9em; color:#555; margin:4px 0 14px;">Control this light by voice with Apple Shortcuts — ask <em>which team is set</em> or <em>who's playing</em>, switch Team/Player mode, set a team, or scroll a message. Your six shortcuts come prefilled for this light and signed — just add them and talk to Siri. (Your <strong>Device ID</strong> and <strong>Secret</strong> must be filled in under <em>Advanced</em> below.)</p>
         <button onclick="showSiri()">Show my Siri shortcuts</button>
@@ -810,16 +833,68 @@
       // tab and is always available, so there is nothing to show/hide here.
       function updateAlertsVisibility() {}
 
+      // ===== Time zone (per-device; Automatic follows this phone, else a manual pick) =====
+      function browserTz() {
+        try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Vancouver'; }
+        catch (e) { return 'America/Vancouver'; }
+      }
+      function tzFriendly(z) {
+        return (z || '').split('/').pop().replace(/_/g, ' ') || z;
+      }
+      // Make sure a zone is selectable even if it's not one of our listed options.
+      function ensureTzOption(zone) {
+        const sel = document.getElementById('tz_select');
+        if (!sel || !zone || zone === 'auto') return;
+        if (![...sel.options].some((o) => o.value === zone)) {
+          const o = document.createElement('option');
+          o.value = zone; o.textContent = zone;
+          sel.appendChild(o);
+        }
+      }
+      // Apply the server's stored tz to the dropdown + hint. On "Automatic", if this
+      // phone's zone differs from what's stored, quietly refresh it.
+      function applyTz(data) {
+        if (!data) return;
+        const sel = document.getElementById('tz_select');
+        const hint = document.getElementById('tz_hint');
+        const detected = browserTz();
+        if (data.auto) {
+          if (sel) sel.value = 'auto';
+          if (hint) hint.textContent = 'Automatic — this phone is ' + tzFriendly(detected) + '; the light uses ' + tzFriendly(data.tz) + '.';
+          if (data.tz !== detected) sendTz(true);  // keep the light in sync with this phone
+        } else {
+          ensureTzOption(data.tz);
+          if (sel) sel.value = data.tz;
+          if (hint) hint.textContent = 'Manual — the light stays on ' + tzFriendly(data.tz) + ' regardless of this phone (' + tzFriendly(detected) + ').';
+        }
+      }
+      // Send the dropdown's choice to the light. silent=true suppresses the toast.
+      function sendTz(silent) {
+        const sel = document.getElementById('tz_select');
+        const choice = sel ? sel.value : 'auto';
+        const payload = (choice === 'auto')
+          ? { tz: browserTz(), auto: true }
+          : { tz: choice, auto: false };
+        sendPlayerCmd('set_tz', JSON.stringify(payload), (res) => {
+          if (res.type === 'set_tz' && res.data) applyTz(res.data);
+        }, silent ? null : '✅ Time zone saved');
+      }
+      // If the device is on Automatic, refresh its zone from this phone (called on save).
+      function maybeAutoTz() {
+        const sel = document.getElementById('tz_select');
+        if (sel && sel.value === 'auto') sendTz(true);
+      }
+
       function fetchDeviceInfo(publicID) {
         if (!publicID) return;
 
         const cid = 'web_info_' + Math.random().toString(16).substr(2, 5);
         const client = new Paho.MQTT.Client(BROKER.url, BROKER.port, BROKER.path, cid);
-        let gotInfo = false, gotFirmware = false, gotPlayer = false;
+        let gotInfo = false, gotFirmware = false, gotPlayer = false, gotTz = false;
         let deviceVersion = null, latestVersion = null;
 
         const tryDisconnect = () => {
-          if (gotInfo && gotFirmware && gotPlayer) {
+          if (gotInfo && gotFirmware && gotPlayer && gotTz) {
             clearTimeout(timer);
             checkForUpdate(deviceVersion, latestVersion);
             setTimeout(() => { try { client.disconnect(); } catch (e) {} }, 500);
@@ -854,6 +929,9 @@
             } else if (res.type === 'player_state') {
               applyPlayerState(res.data, true);
               gotPlayer = true;
+            } else if (res.type === 'get_tz') {
+              applyTz(res.data);
+              gotTz = true;
             }
           } catch (e) {}
           tryDisconnect();
@@ -874,6 +952,7 @@
             send('info', '{}');
             send('firmware', '');
             send('player_get', '');
+            send('get_tz', '');
           },
           onFailure: () => { clearTimeout(timer); showBlockedWarning(); },
         });
@@ -954,6 +1033,7 @@
         };
 
         publishMQTT(`config/${publicID}`, payload, false);
+        maybeAutoTz();
       }
 
       function sendEncryptedWiFi() {
@@ -1418,6 +1498,7 @@
         sendPlayerCmd('player_config', JSON.stringify(cfg), (res) => {
           if (res.type === 'player_config' && res.data) applyPlayerState(res.data, false);
         }, '✅ Players & scoring saved');
+        maybeAutoTz();
       }
 
       function applyPlayerState(data, setToggle = true) {
